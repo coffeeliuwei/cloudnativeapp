@@ -2,7 +2,7 @@
     @import './order.less';
 </style>
 <template>
-    <div>
+    <div class="order-page">
         <!-- 查询条件 -->
         <Row>
             <Form ref="searchForm" :model="searchForm" inline class="search-form">
@@ -17,7 +17,7 @@
             </Form>
         </Row>
         <Row>
-            <Table  border :columns="columns" :data="data" @on-row-click='getTrip'></Table>
+            <Table stripe border :columns="columns" :data="data" @on-row-click='getTrip'></Table>
             <!-- 订单列表分页 -->
             <Row type="flex" justify="end" class="page">
                 <Page :current="searchForm.pageNum" :total="total" :page-size="searchForm.pageSize"

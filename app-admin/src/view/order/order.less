@@ -1,3 +1,59 @@
-.page{
-    margin-top: 10px;
+.order-page {
+  background: #fdf6ee;
+  min-height: 100%;
+}
+
+.search-form {
+  .ivu-input {
+    border-radius: 20px;
+    border-color: #e8d8c4;
+
+    &:focus,
+    &:hover {
+      border-color: #c8825a;
+    }
+  }
+
+  .ivu-input-wrapper .ivu-input-icon {
+    color: #9d7a5e;
+  }
+
+  .ivu-btn-primary {
+    border-radius: 20px;
+  }
+}
+
+.ivu-table-wrapper {
+  .ivu-table-header th {
+    background: #f5ede3 !important;
+    color: #9d7a5e;
+    font-weight: 600;
+    border-color: #e8d8c4;
+  }
+
+  .ivu-table-row-hover td {
+    background: #f5ede3 !important;
+  }
+
+  .ivu-table-stripe .ivu-table-body tr:nth-child(2n) td {
+    background: #fdf6ee;
+  }
+
+  td {
+    border-color: #f0e4d4;
+  }
+}
+
+.ivu-page-item-active a,
+.ivu-page-item-active:hover a {
+  color: #c8825a;
+  border-color: #c8825a;
+}
+
+.ivu-page-item:hover a {
+  color: #c8825a;
+}
+
+.page {
+  margin-top: 10px;
 }
