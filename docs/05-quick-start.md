@@ -9,12 +9,14 @@
 在开始之前，请确认以下工具已安装并可用（在命令提示符/终端输入命令验证）：
 
 ```bash
-java -version    # 应显示 1.8.x
-mvn -version     # 应显示 Apache Maven 3.x.x
-node -v          # 应显示 v12.x 或更高
+java -version    # 应显示 17.x.x（项目要求 Java 17，不支持 Java 8）
+mvn -version     # 应显示 Apache Maven 3.8.x 或更高
+node -v          # 应显示 v16.x 或更高（Vue CLI 5 要求 Node 16+）
 ```
 
 如果有任何一项没有输出，请先参考 [环境搭建指南](../README.md#6-本地开发环境搭建) 完成安装。
+
+> **Java 版本注意**：本项目已升级至 Spring Boot 3.3.4，强制要求 Java 17+。如果你的系统安装了多个 Java 版本，请确认 `JAVA_HOME` 环境变量指向 Java 17 的安装目录。
 
 ---
 
@@ -24,6 +26,7 @@ Nacos 是所有微服务的"电话本"，必须最先启动。
 
 ```bash
 # 进入 Nacos 的 bin 目录（替换为你的实际路径）
+# 注意：必须使用 Nacos 2.x，Dubbo 3.x 不兼容 Nacos 1.x
 cd D:\tools\nacos\bin
 
 # 以单机模式启动
@@ -226,6 +229,17 @@ npm run dev
 ---
 
 ## 常见错误速查
+
+### 错误0：`UnsupportedClassVersionError` 或 `class file has wrong version`
+
+**含义**：Java 版本不够，需要 Java 17+。
+
+**解决方法：**
+1. 下载并安装 JDK 17（推荐：[Adoptium Temurin 17](https://adoptium.net)）
+2. 设置 `JAVA_HOME` 环境变量指向 JDK 17 目录
+3. 重启 IDEA，在 File → Project Structure → SDK 中选择 Java 17
+
+---
 
 ### 错误1：`java.net.ConnectException: Connection refused`
 

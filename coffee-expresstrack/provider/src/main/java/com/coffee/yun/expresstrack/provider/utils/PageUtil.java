@@ -19,14 +19,14 @@ public class PageUtil {
 
     public <T> PageDTO<T> selectPage(String template, BasePageDTO basePageDTO) {
         log.info("开始分页查询 {} 参数：{}", template, JSONUtil.toJsonStr(basePageDTO));
-        PageInfo<T> pageInfo = null;
         try {
-            pageInfo = PageHelper.startPage(basePageDTO.getPageNum(), basePageDTO.getPageSize())
+            PageInfo<T> pageInfo = PageHelper.startPage(basePageDTO.getPageNum(), basePageDTO.getPageSize())
                     .doSelectPageInfo(() -> sqlSessionTemplate.selectList(template, basePageDTO));
+            log.info("分页查询成功：total={}, pages={}", pageInfo.getTotal(), pageInfo.getPages());
+            return new PageDTO<>(pageInfo.getTotal(), pageInfo.getPages(), pageInfo.getList());
         } catch (Exception e) {
-            log.error("分页查询异常：{}", e.getMessage());
+            log.error("分页查询异常：{}", e.getMessage(), e);
+            throw e;
         }
-        log.info("分页查询成功：{}", JSONUtil.toJsonStr(pageInfo));
-        return new PageDTO<>(pageInfo.getTotal(), pageInfo.getPages(), pageInfo.getList());
     }
 }
