@@ -1,6 +1,6 @@
 # 云原生设计与开发课程实例
 
-**课程**：云原生应用框架与开发 ｜ **讲师**：刘伟 ｜ **邮箱**：coffee.liu@gmail.com
+**课程**：云原生应用框架与开发 ｜ **讲师**：coffeeliu ｜ **邮箱**：coffee.liu@gmail.com
 
 > 本项目是课程的完整配套代码，演示基于 **Spring Boot + Apache Dubbo + Nacos + MySQL + Vue.js** 的微服务电商系统。
 > 即使你从未接触过微服务，跟着文档也能一步步把项目跑起来。
