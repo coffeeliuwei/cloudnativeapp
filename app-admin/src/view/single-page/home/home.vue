@@ -11,8 +11,8 @@
     <Row :gutter="20" style="margin-top: 10px;">
       <i-col :md="24" :lg="8" style="margin-bottom: 20px;">
         <Card shadow>
-          <p slot="title" class="card-title">咖啡品类销售占比</p>
-          <chart-pie style="height: 300px;" :value="pieData" text="今日销售"></chart-pie>
+          <p slot="title" class="card-title">订单状态分布</p>
+          <chart-pie style="height: 300px;" :value="pieData" text="当前订单"></chart-pie>
         </Card>
       </i-col>
       <i-col :md="24" :lg="16" style="margin-bottom: 20px;">
@@ -24,7 +24,7 @@
     </Row>
     <Row>
       <Card shadow>
-        <p slot="title" class="card-title">各时段订单趋势（本周）</p>
+        <p slot="title" class="card-title">各时段订单量趋势（本周）</p>
         <example style="height: 310px;"/>
       </Card>
     </Row>
@@ -48,19 +48,19 @@ export default {
   data () {
     return {
       inforCardData: [
-        { title: '今日订单', icon: 'md-cafe', count: 1284, color: '#c8825a' },
-        { title: '待配送', icon: 'md-bicycle', count: 47, color: '#f59e0b' },
-        { title: '今日完成', icon: 'md-checkmark-circle', count: 1237, color: '#6a9e72' },
-        { title: '总用户数', icon: 'md-people', count: 8903, color: '#7c4a2d' },
-        { title: '今日收入', icon: 'md-card', count: 9680, color: '#9d7a5e' },
-        { title: '好评率%', icon: 'md-star', count: 98, color: '#bda998' }
+        { title: '订单总数', icon: 'md-list-box', count: 8426, color: '#c8825a' },
+        { title: '配送中', icon: 'md-bicycle', count: 312, color: '#f59e0b' },
+        { title: '已完成', icon: 'md-checkmark-circle', count: 7958, color: '#6a9e72' },
+        { title: '待处理', icon: 'md-time', count: 156, color: '#7c4a2d' },
+        { title: '总金额(¥)', icon: 'md-card', count: 298640, color: '#9d7a5e' },
+        { title: '会员总数', icon: 'md-people', count: 3201, color: '#bda998' }
       ],
       pieData: [
-        { value: 512, name: '拿铁' },
-        { value: 389, name: '美式' },
-        { value: 201, name: '卡布奇诺' },
-        { value: 134, name: '摩卡' },
-        { value: 48, name: '其他' }
+        { value: 156, name: '待处理' },
+        { value: 312, name: '配送中' },
+        { value: 7958, name: '已完成' },
+        { value: 98, name: '已取消' },
+        { value: 24, name: '异常' }
       ],
       barData: {
         Mon: 1021,

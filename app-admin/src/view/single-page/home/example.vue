@@ -27,7 +27,7 @@ export default {
         }
       },
       legend: {
-        data: ['早晨 7-9点', '上午 9-11点', '午间 11-13点', '下午 13-17点', '傍晚 17-20点'],
+        data: ['待处理', '配送中', '已完成', '已取消'],
         textStyle: { color: '#9d7a5e' }
       },
       grid: {
@@ -56,52 +56,43 @@ export default {
       ],
       series: [
         {
-          name: '早晨 7-9点',
-          type: 'line',
-          stack: '总量',
-          areaStyle: { normal: { color: 'rgba(200, 130, 90, 0.6)' } },
-          lineStyle: { color: '#c8825a' },
-          itemStyle: { color: '#c8825a' },
-          data: [98, 112, 87, 105, 143, 89, 76]
-        },
-        {
-          name: '上午 9-11点',
+          name: '待处理',
           type: 'line',
           stack: '总量',
           areaStyle: { normal: { color: 'rgba(124, 74, 45, 0.5)' } },
           lineStyle: { color: '#7c4a2d' },
           itemStyle: { color: '#7c4a2d' },
-          data: [210, 245, 198, 227, 312, 178, 156]
+          data: [32, 28, 45, 21, 38, 19, 24]
         },
         {
-          name: '午间 11-13点',
+          name: '配送中',
+          type: 'line',
+          stack: '总量',
+          areaStyle: { normal: { color: 'rgba(245, 158, 11, 0.45)' } },
+          lineStyle: { color: '#f59e0b' },
+          itemStyle: { color: '#f59e0b' },
+          data: [187, 245, 198, 227, 312, 278, 256]
+        },
+        {
+          name: '已完成',
           type: 'line',
           stack: '总量',
           areaStyle: { normal: { color: 'rgba(106, 158, 114, 0.5)' } },
           lineStyle: { color: '#6a9e72' },
           itemStyle: { color: '#6a9e72' },
-          data: [345, 398, 312, 367, 421, 289, 265]
+          data: [756, 1045, 912, 698, 1089, 1487, 1342]
         },
         {
-          name: '下午 13-17点',
-          type: 'line',
-          stack: '总量',
-          areaStyle: { normal: { color: 'rgba(245, 158, 11, 0.4)' } },
-          lineStyle: { color: '#f59e0b' },
-          itemStyle: { color: '#f59e0b' },
-          data: [287, 315, 276, 298, 356, 412, 389]
-        },
-        {
-          name: '傍晚 17-20点',
+          name: '已取消',
           type: 'line',
           stack: '总量',
           label: {
             normal: { show: true, position: 'top', color: '#9d7a5e' }
           },
-          areaStyle: { normal: { color: 'rgba(157, 122, 94, 0.35)' } },
-          lineStyle: { color: '#9d7a5e' },
-          itemStyle: { color: '#9d7a5e' },
-          data: [198, 267, 234, 189, 312, 445, 398]
+          areaStyle: { normal: { color: 'rgba(200, 130, 90, 0.35)' } },
+          lineStyle: { color: '#c8825a' },
+          itemStyle: { color: '#c8825a' },
+          data: [12, 18, 9, 15, 22, 11, 8]
         }
       ]
     }
