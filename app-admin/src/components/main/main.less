@@ -1,12 +1,25 @@
 .main{
-  .logo-con{
+  .logo-con {
     height: 64px;
-    padding: 10px;
-    img{
-      height: 44px;
-      width: auto;
-      display: block;
-      margin: 0 auto;
+    padding: 0 12px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    overflow: hidden;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+
+    .logo-icon {
+      font-size: 24px;
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .logo-text {
+      color: rgba(255, 255, 255, 0.95);
+      font-size: 16px;
+      font-weight: 700;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
     }
   }
   .header-con{
