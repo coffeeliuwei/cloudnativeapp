@@ -1,0 +1,23 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="ExpressTrackMapper" >
+    <resultMap id="BaseResultMap" type="com.coffee.yun.expresstrack.api.dto.ExpressTrackInfoResultDTO">
+        <result column="order_id" property="order_id" jdbcType="VARCHAR"/>
+        <result column="express_id" property="express_id" jdbcType="VARCHAR" />
+        <result column="express_weight" property="express_weight" jdbcType="VARCHAR" />
+        <result column="track_id" property="track_id" jdbcType="VARCHAR" />
+        <result column="track_show" property="track_show" jdbcType="VARCHAR" />
+    </resultMap>
+    <select id="selectByParam" resultMap="BaseResultMap" parameterType="com.coffee.yun.expresstrack.api.dto.ExpressTrackInfoParamDTO">
+        SELECT express.express_id,
+        order_id,
+        express_weight,
+        track_id,
+        track_show
+        FROM `express`
+        LEFT JOIN `track` on `express`.`express_id`= `track`.`express_id`
+        <if test="order_id!=null and order_id!=''">
+            and order_id = #{order_id,jdbcType=VARCHAR}
+        </if>
+    </select>
+</mapper>

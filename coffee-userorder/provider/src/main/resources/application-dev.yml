@@ -1,0 +1,5 @@
+database:
+  user: ${DB_USER:userordertest}
+  password: ${DB_PASSWORD:Userordertest123}
+  host: ${DB_HOST:rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com:3306}
+  dbname: ${DB_NAME:userordertest}

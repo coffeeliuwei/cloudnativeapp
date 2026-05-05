@@ -1,0 +1,5 @@
+database:
+  user: ${DB_USER:expresstracktest}
+  password: ${DB_PASSWORD:Expresstracktest123}
+  host: ${DB_HOST:rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com:3306}
+  dbname: ${DB_NAME:expresstracktest}

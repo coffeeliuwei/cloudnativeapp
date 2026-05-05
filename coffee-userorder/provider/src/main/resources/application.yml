@@ -1,0 +1,29 @@
+﻿server:
+  port: 7001
+spring:
+  application:
+    name: coffee-userorder
+  profiles:
+    active: ${ENV:dev}
+  jackson:
+    dateFormat: yyyy-MM-dd HH:mm:ss
+    timeZone: GMT+8
+  datasource:
+    # 如果存在多个数据源，监控的时候可以通过名字来区分
+    name: coffee-userorder
+    url: jdbc:mysql://${database.host}/${database.dbname}?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=false
+    username: ${database.user}
+    password: ${database.password}
+    driverClassName: com.mysql.jdbc.Driver
+mybatis:
+  mapperLocations: classpath:mapper/*.xml
+  configuration:
+    log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
+dubbo:
+  scan:
+    basePackages: com.coffee.yun.userorder
+  application:
+    name: coffee-userorder
+  registry:
+    address: nacos://127.0.0.1:8848
+

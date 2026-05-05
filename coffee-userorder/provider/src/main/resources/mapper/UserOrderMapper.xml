@@ -1,0 +1,28 @@
+﻿<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd" >
+<mapper namespace="UserOrderMapper" >
+    <resultMap id="BaseResultMap" type="com.coffee.yun.userorder.api.dto.UserOrderInfoResultDTO">
+        <result column="member_name" property="member_name" jdbcType="VARCHAR"/>
+        <result column="member_phone" property="member_phone" jdbcType="VARCHAR" />
+        <result column="OneID" property="OneID" jdbcType="VARCHAR" />
+        <result column="order_id" property="order_id" jdbcType="VARCHAR" />
+        <result column="order_amount" property="order_amount" jdbcType="VARCHAR" />
+        <result column="order_status" property="order_status" jdbcType="VARCHAR" />
+    </resultMap>
+    <select id="selectByParam" resultMap="BaseResultMap" parameterType="com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO">
+        select m.member_name,
+        m.member_phone,
+        o.OneID,
+        o.order_id,
+        o.order_amount,
+        o.order_status
+        from member m,`order` o
+        where m.OneID= o.OneID
+        <if test="order_id!=null and order_id!=''">
+            and o.order_id = #{order_id,jdbcType=VARCHAR}
+        </if>
+        <if test="member_name!=null and member_name!=''">
+            and m.member_name= #{member_name,jdbcType=VARCHAR}
+        </if>
+    </select>
+</mapper>
