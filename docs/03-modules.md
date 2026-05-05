@@ -4,6 +4,21 @@
 >
 > **阅读建议**：跟着架构图的数据流方向阅读——先看前端（展示层），再看网关，最后深入微服务内部——这样能建立起完整的调用心智模型。
 
+## 技术栈版本矩阵（2025）
+
+| 组件 | 旧版本（2021）| 当前版本 | 主要变化 |
+|------|-------------|---------|---------|
+| Java | 8 | **17** | 语言特性增强，LTS 长期支持版本 |
+| Spring Boot | 2.3.x / 2.6.x | **3.3.4** | `javax.*` → `jakarta.*`，需 Java 17+ |
+| Apache Dubbo | 2.7.x | **3.3.4** | `@Reference` → `@DubboReference`，原生 Nacos 支持增强 |
+| MyBatis Spring Boot | 1.3.x | **3.0.3** | 适配 Spring Boot 3.x |
+| MySQL 驱动 | mysql-connector-java 5.1 | **mysql-connector-j 8.3.0** | groupId 变更，驱动类名变更 |
+| FastJSON | fastjson 1.2.x | **fastjson2 2.0.53** | 重写版本，安全性更好，artifactId 变更 |
+| Hutool | 4.x | **5.8.26** | API 兼容，修复历史安全漏洞 |
+| PageHelper | 1.2.x | **2.1.0** | 适配 MyBatis 3.x / Spring Boot 3.x |
+| SLS Logback Appender | 0.1.12 | **0.1.27** | `accessKey` → `accessKeySecret` 配置项 |
+| Vue.js | 2.5.x | **2.7.16** | Composition API 支持，axios 0.18 → 1.7.7 |
+
 ---
 
 ## 架构层次总览
@@ -32,7 +47,7 @@
 
 | 模块 | 层次 | 技术 | 端口 |
 |------|------|------|------|
-| [app-admin](#1-展示层--app-admin) | 展示层 | Vue.js 2 + iView UI | 8080 |
+| [app-admin](#1-展示层--app-admin) | 展示层 | Vue.js 2.7 + iView UI 4 | 8080 |
 | [coffee-app](#2-网关层--coffee-app) | 网关层 | Spring Boot | 8005 |
 | [coffee-userorder](#3-微服务层--coffee-userorder用户订单微服务) | 微服务层 | Spring Boot + Dubbo + MyBatis | 7001 |
 | [coffee-expresstrack](#4-微服务层--coffee-expresstrack快递轨迹微服务) | 微服务层 | Spring Boot + Dubbo + MyBatis | HTTP:8001 / Dubbo:28888 |
@@ -44,7 +59,7 @@
 
 ### 定位与职责
 
-`app-admin` 是用户直接使用的管理后台界面。它基于开源模板 **iview-admin**（Vue.js 2 + iView UI）构建，负责：
+`app-admin` 是用户直接使用的管理后台界面。它基于开源模板 **iview-admin**（Vue.js 2.7 + iView UI 4）构建，负责：
 
 - 呈现订单和快递轨迹数据（从 `coffee-app` 获取）
 - 提供查询表单，收集用户输入并发起 HTTP 请求
@@ -331,7 +346,7 @@ import com.coffee.yun.coffeeapp.base.Result;
 import com.coffee.yun.coffeeapp.base.ResultUtil;
 import com.coffee.yun.userorder.api.dto.*;
 import com.coffee.yun.userorder.api.service.UserOrderInfoService;
-import org.apache.dubbo.config.annotation.Reference;
+import org.apache.dubbo.config.annotation.DubboReference;
 import org.springframework.web.bind.annotation.*;
 
 /**
@@ -346,16 +361,16 @@ import org.springframework.web.bind.annotation.*;
 public class CoffeeController {
 
     /**
-     * @Reference 是 Dubbo 的核心注解。
+     * @DubboReference 是 Dubbo 3.x 的核心注解（Dubbo 2.x 用 @Reference）。
      * 它不会在本地找这个接口的实现类，而是：
      *   1. 启动时向 Nacos 查询"谁实现了 UserOrderInfoService"
      *   2. 创建一个网络代理对象，调用它时自动走 RPC
      *   3. 对代码来说，像普通本地对象一样使用
      */
-    @Reference
+    @DubboReference
     private UserOrderInfoService userOrderInfoService;
 
-    @Reference
+    @DubboReference
     private ExpressTrackInfoService expressTrackInfoService;
 
     /**
@@ -365,7 +380,7 @@ public class CoffeeController {
      * @PathVariable 从 URL 路径中提取参数：
      *   请求 /hello/ORDER001 → orderid = "ORDER001"
      */
-    @RequestMapping("/hello/{orderid}")
+    @GetMapping("/hello/{orderid}")
     public PageDTO<ExpressTrackInfoResultDTO> helloCoffee(
             @PathVariable String orderid) {
 
@@ -389,8 +404,8 @@ public class CoffeeController {
      * @RequestBody 从 HTTP 请求体中读取 JSON 并转换为 Java 对象：
      *   请求体 {"order_id":"ORDER001"} → param.order_id = "ORDER001"
      */
-    @PostMapping("findOrderList")
-    public Result<PageDTO> findOrderList(
+    @PostMapping("/findOrderList")
+    public Result<PageDTO<ExpressTrackInfoResultDTO>> findOrderList(
             @RequestBody UserOrderInfoParamDTO param) {
 
         UserOrderInfoResultDTO orderResult =
@@ -399,11 +414,11 @@ public class CoffeeController {
         ExpressTrackInfoParamDTO trackParam = new ExpressTrackInfoParamDTO();
         trackParam.setOrder_id(orderResult.getOrder_id());
 
-        PageDTO trackPage =
+        PageDTO<ExpressTrackInfoResultDTO> trackPage =
             expressTrackInfoService.findExpressTrackInfos(trackParam);
 
         // ResultUtil 将数据包装进统一响应体 Result<T>
-        return new ResultUtil<PageDTO>().setData(trackPage);
+        return new ResultUtil<PageDTO<ExpressTrackInfoResultDTO>>().setData(trackPage);
     }
 }
 ```
@@ -412,7 +427,7 @@ public class CoffeeController {
 
 | | `/hello/{orderid}` | `/findOrderList` |
 |---|---|---|
-| HTTP 方法 | GET（`@RequestMapping` 默认） | POST（`@PostMapping`） |
+| HTTP 方法 | GET（`@GetMapping`） | POST（`@PostMapping`） |
 | 参数位置 | URL 路径（`@PathVariable`） | 请求体 JSON（`@RequestBody`） |
 | 返回格式 | 直接返回 `PageDTO` | 包装在 `Result<PageDTO>` 中 |
 | 使用场景 | 前端直接查轨迹 | 管理后台列表查询 |
@@ -653,12 +668,16 @@ public class UserOrderInfoServiceImpl implements UserOrderInfoService {
 }
 ```
 
-**`@DubboService` 与 `@Service` 的核心区别：**
+**`@DubboService` / `@DubboReference` 与 Spring 注解的核心区别：**
 
-| 注解 | 归属 | 注册范围 | 使用场景 |
-|------|------|---------|---------|
-| `@Service`（Spring） | Spring 框架 | 当前 JVM 进程内 | 同一应用内的组件 |
-| `@DubboService` | Dubbo 框架 | Nacos 注册中心（跨进程可见）| **需要被其他应用远程调用**的服务 |
+| 注解 | 归属 | 作用 | 使用场景 |
+|------|------|-----|---------|
+| `@Service`（Spring） | Spring 框架 | 注册到 Spring 容器 | 同一应用内的组件 |
+| `@Autowired`（Spring） | Spring 框架 | 注入本地 Bean | 同一进程内依赖注入 |
+| `@DubboService`（Dubbo 3.x）| Dubbo 框架 | 注册到 Nacos，暴露 RPC 接口 | **需要被其他应用远程调用**的服务 |
+| `@DubboReference`（Dubbo 3.x）| Dubbo 框架 | 创建远程代理，注入调用方 | **调用远程 Dubbo 服务** |
+
+> **版本说明：** Dubbo 2.x 使用 `@Service` + `@Reference`（已废弃），Dubbo 3.x 改为语义更明确的 `@DubboService` + `@DubboReference`，避免与 Spring 的 `@Service` 混淆。
 
 ---
 
@@ -735,23 +754,28 @@ spring:
 
   datasource:
     name: coffee-userorder
-    url: jdbc:mysql://${database.host}/${database.dbname}?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=false
+    # allowPublicKeyRetrieval=true 是 MySQL 8.x 密钥交换所需参数
+    url: jdbc:mysql://${database.host}/${database.dbname}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
     username: ${database.user}
     password: ${database.password}
-    driverClassName: com.mysql.jdbc.Driver
+    # MySQL 8 新驱动类（旧版 com.mysql.jdbc.Driver 已废弃）
+    driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis:
-  mapperLocations: classpath:mapper/*.xml    # 扫描 resources/mapper/ 下所有 XML
+  mapper-locations: classpath:mapper/*.xml   # 扫描 resources/mapper/ 下所有 XML
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl   # 打印 SQL 到控制台（开发调试用）
 
 dubbo:
   scan:
-    basePackages: com.coffee.yun.userorder   # 扫描此包，找 @DubboService 注解的类并注册
+    base-packages: com.coffee.yun.userorder  # 扫描此包，找 @DubboService 注解的类并注册
   application:
     name: coffee-userorder
   registry:
-    address: nacos://127.0.0.1:8848          # 服务注册到这个 Nacos 地址
+    address: nacos://${nacos.host:127.0.0.1}:${nacos.port:8848}  # 支持环境变量覆盖
+  protocol:
+    name: dubbo
+    serialization: fastjson2                 # Dubbo 3.x 推荐序列化方式
 ```
 
 **`${database.host}` 这类变量从哪里来？**
@@ -936,13 +960,15 @@ spring:
 
 dubbo:
   protocol:
+    name: dubbo
     port: 28888                    # Dubbo RPC 专用端口（关键！）
+    serialization: fastjson2       # Dubbo 3.x 推荐序列化方式
   scan:
-    basePackages: com.coffee.yun.expresstrack
+    base-packages: com.coffee.yun.expresstrack
   application:
     name: coffee-expresstrack
   registry:
-    address: nacos://127.0.0.1:8848
+    address: nacos://${nacos.host:localhost}:${nacos.port:8848}
 ```
 
 **为什么 `coffee-expresstrack` 需要单独指定 Dubbo 端口（28888）？**
@@ -977,17 +1003,21 @@ Dubbo 默认端口是 20880。本机同时运行 `coffee-userorder` 和 `coffee-
         </encoder>
     </appender>
 
-    <!-- aliyun_dev：将日志推送到阿里云日志服务（SLS）-->
-    <appender name="aliyun_dev" class="com.aliyun.openservices.log.logback.LoghubAppender">
+    <!--
+        aliyun_sls：将日志推送到阿里云日志服务（SLS）
+        使用 aliyun-log-logback-appender 0.1.27
+        注意：0.1.16+ 版本配置项 accessKey → accessKeySecret
+    -->
+    <appender name="aliyun_sls" class="com.aliyun.openservices.log.logback.LoghubAppender">
         <endpoint>cn-beijing.log.aliyuncs.com</endpoint>
         <!-- 使用环境变量，不在代码中硬编码密钥 -->
         <accessKeyId>${ALIYUN_ACCESS_KEY_ID}</accessKeyId>
-        <accessKey>${ALIYUN_ACCESS_KEY_SECRET}</accessKey>
+        <accessKeySecret>${ALIYUN_ACCESS_KEY_SECRET}</accessKeySecret>
         <projectName>userorder</projectName>
         <logstore>logs</logstore>
         <topic>订单</topic>
         <!-- 批量发送配置（减少网络请求次数）-->
-        <packageTimeoutInMS>30000</packageTimeoutInMS>     <!-- 最长等待 30 秒发一批 -->
+        <packageTimeoutInMS>3000</packageTimeoutInMS>      <!-- 最长等待 3 秒发一批 -->
         <logsCountPerPackage>4096</logsCountPerPackage>    <!-- 一批最多 4096 条 -->
         <logsBytesPerPackage>3145728</logsBytesPerPackage> <!-- 一批最大 3MB -->
         <retryTimes>3</retryTimes>
@@ -997,7 +1027,14 @@ Dubbo 默认端口是 20880。本机同时运行 `coffee-userorder` 和 `coffee-
     <springProfile name="dev">
         <root level="INFO">
             <appender-ref ref="CONSOLE" />
-            <appender-ref ref="aliyun_dev" />
+            <appender-ref ref="aliyun_sls" />
+        </root>
+    </springProfile>
+
+    <!-- prod 环境：仅推送到 SLS，不输出到控制台 -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="aliyun_sls" />
         </root>
     </springProfile>
 </configuration>
@@ -1005,12 +1042,19 @@ Dubbo 默认端口是 20880。本机同时运行 `coffee-userorder` 和 `coffee-
 
 **为什么用 `${ALIYUN_ACCESS_KEY_ID}` 而不是直接写密钥？**
 
-AccessKey 是访问阿里云的凭证，相当于"用户名+密码"。硬编码在代码里会被 Git 记录，一旦代码公开就等于泄露密钥。正确做法是通过环境变量注入，运行时设置：
+AccessKey 是访问阿里云的凭证，相当于"用户名+密码"。硬编码在代码里会被 Git 记录，一旦代码公开就等于泄露密钥。GitHub 的密钥扫描会自动拦截包含明文 AccessKey 的推送。正确做法是通过环境变量注入，运行时设置：
 
 ```bash
+# Linux/macOS
 export ALIYUN_ACCESS_KEY_ID=your_key_id
 export ALIYUN_ACCESS_KEY_SECRET=your_key_secret
+
+# Windows PowerShell
+$env:ALIYUN_ACCESS_KEY_ID = "your_key_id"
+$env:ALIYUN_ACCESS_KEY_SECRET = "your_key_secret"
 ```
+
+> **阿里云建议：** 生产环境使用 RAM 角色而非 AccessKey，通过 ECS 元数据服务自动获取临时凭证，避免密钥管理问题。
 
 详细的 SLS 配置步骤见 [阿里云配置指南](./01-aliyun-guide.md#3-日志服务-sls)。
 
@@ -1115,10 +1159,11 @@ PageDTO<ProductDTO> productPage = ...
         <artifactId>lombok</artifactId>
     </dependency>
 
-    <!-- FastJSON：阿里巴巴的 JSON 序列化/反序列化库 -->
+    <!-- FastJSON2：fastjson 的重写版本，性能更好、安全性更高（fastjson 1.x 多次出现安全漏洞）-->
     <dependency>
-        <groupId>com.alibaba</groupId>
-        <artifactId>fastjson</artifactId>
+        <groupId>com.alibaba.fastjson2</groupId>
+        <artifactId>fastjson2</artifactId>
+        <version>2.0.53</version>
     </dependency>
 
     <!-- PageHelper：MyBatis 分页插件，自动处理分页 SQL（无需手写 LIMIT） -->

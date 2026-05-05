@@ -1,4 +1,4 @@
-﻿server:
+server:
   port: 7001
 spring:
   application:
@@ -6,24 +6,27 @@ spring:
   profiles:
     active: ${ENV:dev}
   jackson:
-    dateFormat: yyyy-MM-dd HH:mm:ss
-    timeZone: GMT+8
+    date-format: yyyy-MM-dd HH:mm:ss
+    time-zone: GMT+8
   datasource:
-    # 如果存在多个数据源，监控的时候可以通过名字来区分
     name: coffee-userorder
-    url: jdbc:mysql://${database.host}/${database.dbname}?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&useSSL=false
+    url: jdbc:mysql://${database.host}/${database.dbname}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
     username: ${database.user}
     password: ${database.password}
-    driverClassName: com.mysql.jdbc.Driver
+    # MySQL 8 驱动类（com.mysql.cj.jdbc.Driver）
+    driver-class-name: com.mysql.cj.jdbc.Driver
 mybatis:
-  mapperLocations: classpath:mapper/*.xml
+  mapper-locations: classpath:mapper/*.xml
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 dubbo:
   scan:
-    basePackages: com.coffee.yun.userorder
+    base-packages: com.coffee.yun.userorder
   application:
     name: coffee-userorder
   registry:
-    address: nacos://127.0.0.1:8848
-
+    address: nacos://${nacos.host:127.0.0.1}:${nacos.port:8848}
+  protocol:
+    name: dubbo
+    # Dubbo 3.x 推荐使用 fastjson2 序列化
+    serialization: fastjson2

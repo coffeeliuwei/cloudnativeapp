@@ -1,7 +1,10 @@
 import axios from 'axios'
-// 定义接口请求方法
+
+// 统一请求路径前缀
+// 生产环境通过 VUE_APP_BASE_URL 环境变量注入，开发默认指向本地网关
+const baseURL = process.env.VUE_APP_BASE_URL || 'http://localhost:8005'
+
 const postComplexRequest = (url, params) => {
-    alert(url)
   return axios({
     method: 'post',
     url: `${url}`,
@@ -11,9 +14,8 @@ const postComplexRequest = (url, params) => {
     }
   })
 }
-// 统一请求路径前缀
-var baseURL = 'http://139.224.195.42'
-// 获取订单列表
+
+// 获取订单列表（含快递轨迹）
 export const findOrderList = (params) => {
-    return postComplexRequest(`${baseURL}` + '/findOrderList', params)
+  return postComplexRequest(`${baseURL}/findOrderList`, params)
 }

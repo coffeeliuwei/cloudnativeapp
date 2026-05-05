@@ -1,21 +1,61 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<configuration  scan="false" scanPeriod="10 seconds">
+<configuration scan="false" scanPeriod="10 seconds">
     <contextName>logback</contextName>
-    <property name="LOG_PATTERN" value=" 用户订单中心  %d{yyyy-MM-dd HH:mm:ss.SSS}   %msg      %-5level %logger{50} %n"/>
+    <property name="LOG_PATTERN"
+              value=" 快递轨迹中心  %d{yyyy-MM-dd HH:mm:ss.SSS}   %msg      %-5level %logger{50} %n"/>
     <shutdownHook class="ch.qos.logback.core.hook.DelayingShutdownHook"/>
+
+    <!-- 控制台输出 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <filter class="ch.qos.logback.classic.filter.ThresholdFilter">
-            <level>info</level>
+            <level>INFO</level>
         </filter>
         <encoder>
             <Pattern>${LOG_PATTERN}</Pattern>
             <charset>UTF-8</charset>
         </encoder>
     </appender>
-    <!--开发环境-->
+
+    <!--
+        阿里云 SLS 日志服务 Appender（aliyun-log-logback-appender 0.1.27）
+        密钥通过环境变量注入，避免硬编码到配置文件：
+          ALIYUN_ACCESS_KEY_ID / ALIYUN_ACCESS_KEY_SECRET
+    -->
+    <appender name="aliyun_sls" class="com.aliyun.openservices.log.logback.LoghubAppender">
+        <!-- 阿里云 SLS 接入点，按实际 Region 修改 -->
+        <endpoint>cn-beijing.log.aliyuncs.com</endpoint>
+        <accessKeyId>${ALIYUN_ACCESS_KEY_ID}</accessKeyId>
+        <accessKeySecret>${ALIYUN_ACCESS_KEY_SECRET}</accessKeySecret>
+        <!-- SLS 项目与日志库配置 -->
+        <projectName>expresstrack</projectName>
+        <logstore>logs</logstore>
+        <topic>快递轨迹</topic>
+        <!-- 性能调优参数 -->
+        <packageTimeoutInMS>3000</packageTimeoutInMS>
+        <logsCountPerPackage>4096</logsCountPerPackage>
+        <logsBytesPerPackage>3145728</logsBytesPerPackage>
+        <memPoolSizeInByte>104857600</memPoolSizeInByte>
+        <retryTimes>3</retryTimes>
+        <maxIOThreadSizeInPool>8</maxIOThreadSizeInPool>
+        <encoder>
+            <Pattern>${LOG_PATTERN}</Pattern>
+        </encoder>
+        <timeFormat>yyyy-MM-dd'T'HH:mm:ssZ</timeFormat>
+        <timeZone>Asia/Shanghai</timeZone>
+    </appender>
+
+    <!-- 开发环境：控制台 + SLS -->
     <springProfile name="dev">
         <root level="INFO">
-            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="CONSOLE"/>
+            <appender-ref ref="aliyun_sls"/>
+        </root>
+    </springProfile>
+
+    <!-- 生产环境：仅 SLS -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="aliyun_sls"/>
         </root>
     </springProfile>
 </configuration>

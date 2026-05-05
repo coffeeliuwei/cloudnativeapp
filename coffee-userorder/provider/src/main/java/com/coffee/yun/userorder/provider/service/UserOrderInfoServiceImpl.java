@@ -1,4 +1,4 @@
-﻿package com.coffee.yun.userorder.provider.service;
+package com.coffee.yun.userorder.provider.service;
 
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONUtil;
@@ -15,27 +15,20 @@ import org.springframework.beans.factory.annotation.Autowired;
 @Slf4j
 @DubboService
 public class UserOrderInfoServiceImpl implements UserOrderInfoService {
+
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
     @Autowired
     private PageUtil pageUtil;
+
     @Override
     public UserOrderInfoResultDTO findUserOrderInfo(UserOrderInfoParamDTO userOrderInfoParamDTO) {
-
-        log.info(" 订单查询 根据用户订单ID查询订单详情："+ JSONUtil.toJsonStr(userOrderInfoParamDTO));
-        UserOrderInfoResultDTO userOrderInfoResultDTO = sqlSessionTemplate.
-                selectOne("UserOrderMapper.selectByParam",userOrderInfoParamDTO);
-        return userOrderInfoResultDTO;
-
+        log.info("订单查询 根据用户订单ID查询订单详情：{}", JSONUtil.toJsonStr(userOrderInfoParamDTO));
+        return sqlSessionTemplate.selectOne("UserOrderMapper.selectByParam", userOrderInfoParamDTO);
     }
 
-    /**
-     * 按条件查询用户订单列表
-     * @param userOrderInfoParamDTO
-     * @return
-     */
     @Override
     public PageDTO<UserOrderInfoResultDTO> findUserOrderInfos(UserOrderInfoParamDTO userOrderInfoParamDTO) {
-        return pageUtil.selectPage("UserOrderMapper.selectByParam",userOrderInfoParamDTO);
+        return pageUtil.selectPage("UserOrderMapper.selectByParam", userOrderInfoParamDTO);
     }
 }
