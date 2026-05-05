@@ -1161,4 +1161,275 @@ PageDTO<ProductDTO> productPage = ...
 
 ---
 
+---
+
+## 6. 技术原理深度解析
+
+> 本章独立讲解代码中涉及的关键技术原理，补充"代码是什么"之外的"为什么这样设计"。
+
+---
+
+### 6.1 PageHelper 分页原理——它怎么"拦截"SQL？
+
+项目使用 PageHelper 做分页，但代码里看不到任何 `LIMIT` 语句——分页是自动加上去的。原理是 **MyBatis 拦截器（Interceptor）**。
+
+**没有 PageHelper 时，手写分页的痛苦：**
+
+```java
+// 每个查询都要手动写两条 SQL
+// 1. 查数据（带 LIMIT）
+List<User> list = sqlSession.selectList(
+    "selectUsers", null, new RowBounds(offset, limit));
+
+// 2. 查总数（不带 LIMIT）
+Long total = sqlSession.selectOne("countUsers", param);
+```
+
+**使用 PageHelper 后：**
+
+```java
+// 调用前设置分页参数
+PageHelper.startPage(pageNum, pageSize);   // 比如：第2页，每页10条
+
+// 正常执行查询（不带 LIMIT 的 SQL）
+List<User> list = sqlSession.selectList("selectUsers", param);
+// PageHelper 自动将 SQL 改写为：
+//   SELECT ... FROM user WHERE ... LIMIT 10 OFFSET 10
+
+// 结果自动包含总数
+PageInfo<User> pageInfo = new PageInfo<>(list);
+long total = pageInfo.getTotal();   // PageHelper 还自动执行了 COUNT(*) 查询
+```
+
+**拦截器工作机制图示：**
+
+```
+代码调用 selectList("selectUsers", param)
+    ↓
+MyBatis 拦截器链（PageHelper 注册在此）
+    ↓  PageHelper 检测到当前线程有分页参数（ThreadLocal 存储）
+    ↓  将原 SQL: SELECT ... FROM user WHERE ...
+    ↓  改写为:  SELECT ... FROM user WHERE ... LIMIT 10 OFFSET 10
+    ↓  同时执行: SELECT COUNT(*) FROM (原 SQL) 获取总数
+    ↓
+数据库执行改写后的 SQL，返回结果
+```
+
+`PageHelper.startPage()` 通过 **ThreadLocal** 传递分页参数——同一线程里，`startPage()` 和后续的查询共享这个参数，其他线程不受影响。这就是为什么必须在查询**紧接之前**调用 `startPage()`，中间不能插入其他查询操作。
+
+---
+
+### 6.2 `SqlSessionTemplate` 和 Mapper 接口——两种 MyBatis 使用方式
+
+本项目使用 `SqlSessionTemplate` 直接执行 SQL：
+
+```java
+@Autowired
+private SqlSessionTemplate sqlSessionTemplate;
+
+// 通过字符串 statement 名称执行查询
+List<UserOrderInfoResultDTO> list = sqlSessionTemplate.selectList(
+    "UserOrderMapper.selectByParam", param);
+```
+
+另一种更常见的方式是 **Mapper 接口**：
+
+```java
+// 定义接口，方法名对应 XML 中的 id
+@Mapper
+public interface UserOrderMapper {
+    List<UserOrderInfoResultDTO> selectByParam(UserOrderInfoParamDTO param);
+}
+
+// 注入使用——MyBatis 自动生成代理实现类
+@Autowired
+private UserOrderMapper userOrderMapper;
+
+List<UserOrderInfoResultDTO> list = userOrderMapper.selectByParam(param);
+```
+
+**两种方式的对比：**
+
+| 对比维度 | `SqlSessionTemplate` | Mapper 接口 |
+|---------|---------------------|------------|
+| 类型安全 | ❌ 字符串引用，拼写错误只在运行时发现 | ✅ 编译时检查，IDE 自动补全 |
+| 代码量 | 较少（不需要额外接口） | 需要写接口文件 |
+| 重构友好 | ❌ 重命名 XML id 时需要全局搜索字符串 | ✅ 重构工具可自动追踪 |
+| 主流程度 | 早期写法，现在较少见 | ✅ **当前主流推荐写法** |
+
+**本项目为何用 `SqlSessionTemplate`？** 主要是历史原因——早期 MyBatis 版本 Mapper 接口功能不完整，部分老代码使用这种方式。新项目建议优先使用 Mapper 接口。
+
+---
+
+### 6.3 Dubbo fastjson2 序列化——为什么要指定序列化方式？
+
+在 Dubbo 配置中经常看到：
+
+```yaml
+dubbo:
+  provider:
+    serialization: fastjson2
+```
+
+这控制的是 **RPC 调用时数据如何在网络上传输**。
+
+**序列化的必要性：**
+
+```
+coffee-app 内存中的 Java 对象：
+  UserOrderInfoParamDTO { order_id = "ORDER001", pageNum = 1 }
+             ↓ 序列化（对象 → 字节流）
+网络传输：  [0x7B 0x22 0x6F 0x72 0x64 0x65 0x72 ...]（字节数据）
+             ↓ 反序列化（字节流 → 对象）
+coffee-userorder 收到：
+  UserOrderInfoParamDTO { order_id = "ORDER001", pageNum = 1 }
+```
+
+**Dubbo 支持的序列化方式对比：**
+
+| 序列化方式 | 性能 | 可读性 | 跨语言 | 适用场景 |
+|-----------|------|--------|--------|---------|
+| Hessian2（默认）| 中 | ❌ 二进制 | 有限 | Dubbo 传统方案 |
+| **fastjson2** | 高 | ✅ JSON 文本 | ✅ | Java 微服务，调试方便 |
+| Protobuf | 最高 | ❌ 二进制 | ✅ 最佳 | 高性能跨语言场景 |
+| JDK 原生 | 低 | ❌ 二进制 | ❌ | 不推荐 |
+
+**不指定会怎样？** Dubbo 默认用 Hessian2，功能上没问题，但：
+- 日志里看到的是二进制乱码，调试困难
+- 与某些版本的 Dubbo 存在兼容性问题
+- fastjson2 在 JSON 解析速度上有明显优势
+
+**fastjson2 的一个注意事项：** 序列化的类必须有无参构造方法（默认都有，使用 Lombok 的 `@Data` 时注意如果同时加了 `@AllArgsConstructor` 需要再加 `@NoArgsConstructor`）。
+
+---
+
+### 6.4 `@SpringBootApplication` 三合一原理
+
+启动类上这一个注解包含了三个功能：
+
+```java
+@SpringBootApplication
+// 等价于同时加上：
+@SpringBootConfiguration    // 1. 这是一个 Spring 配置类
+@EnableAutoConfiguration    // 2. 开启自动配置
+@ComponentScan              // 3. 开启组件扫描
+public class CoffeeAppApplication { ... }
+```
+
+**三个功能分别做什么：**
+
+#### `@SpringBootConfiguration`
+
+标记此类是 Spring 的配置类，相当于 XML 时代的 `applicationContext.xml`。可以在此类中用 `@Bean` 方法手动注册 Bean。
+
+#### `@EnableAutoConfiguration`（最重要）
+
+Spring Boot 的核心魔法——**根据 classpath 里有什么 jar，自动推断并配置对应的 Bean**。
+
+```
+classpath 里有 spring-boot-starter-web？
+  → 自动配置 DispatcherServlet、Jackson（JSON序列化）、Tomcat 服务器
+
+classpath 里有 mybatis-spring-boot-starter？
+  → 自动配置 SqlSessionFactory、MapperScannerConfigurer
+
+classpath 里有 dubbo-spring-boot-starter？
+  → 自动注册 Dubbo 服务、连接 Nacos
+
+没有 DataSourceAutoConfiguration？（被 exclude 排除）
+  → 不配置数据库连接池（coffee-app 不连库，所以排除它）
+```
+
+原理是读取每个 jar 包里的 `META-INF/spring/org.springframework.boot.autoconfigure.AutoConfiguration.imports` 文件，里面列出了该 jar 提供的自动配置类。
+
+#### `@ComponentScan`
+
+扫描**启动类所在包及其子包**下的所有 `@Component`、`@Service`、`@Repository`、`@Controller` 注解类，将它们注册为 Spring Bean。
+
+```
+CoffeeAppApplication 在 com.coffee.yun.coffeeapp 包
+→ 扫描范围：com.coffee.yun.coffeeapp 及所有子包
+→ 找到 CoffeeController（@RestController）→ 注册为 Bean
+```
+
+**这就是为什么启动类必须放在最顶层包**——如果放错位置，子包里的 Controller 就扫描不到，接口就无法访问。
+
+---
+
+### 6.5 配置分层与敏感信息保护
+
+#### 配置文件的两层结构
+
+```
+application.yml          ← 提交到 Git，只放"骨架"配置
+application-dev.yml      ← 不提交 Git，放真实密码和地址
+```
+
+`application.yml` 用占位符引用变量：
+
+```yaml
+spring:
+  datasource:
+    url: jdbc:mysql://${database.host}/${database.dbname}
+    username: ${database.user}
+    password: ${database.password}
+```
+
+`application-dev.yml` 填充真实值：
+
+```yaml
+# 这个文件不提交 Git！
+database:
+  host: rm-bp1xxxx.mysql.rds.aliyuncs.com:3306
+  dbname: userordertest
+  user: admin
+  password: MySecretPassword123
+```
+
+Spring Boot 启动时，`spring.profiles.active=dev` 激活 dev 配置，两个文件的内容合并，占位符被真实值替换。
+
+#### `.gitignore` 的作用
+
+`.gitignore` 文件告诉 Git "这些文件不要追踪"：
+
+```gitignore
+# 个人环境配置（含数据库密码）
+application-dev.yml
+application-local.yml
+
+# 编译产物
+target/
+*.class
+
+# IDE 配置（每个人不同，不应共享）
+.idea/
+*.iml
+```
+
+**如果密钥被意外提交了怎么办？**
+
+即使立刻删除文件再提交，Git 历史里仍然保存着密钥——任何能看到仓库历史的人都能找到。**正确处理方式是立即更换密钥**，不要指望通过修改历史来掩盖。
+
+#### 生产环境的最佳实践
+
+生产环境不应该用文件存储密码，而是用环境变量注入：
+
+```bash
+# Linux/macOS（ECS 服务器上执行）
+export DATABASE_PASSWORD=MySecretPassword123
+export ALIYUN_ACCESS_KEY_ID=LTAI4xxxxx
+export ALIYUN_ACCESS_KEY_SECRET=xxxxxxxxxxxxxx
+```
+
+```yaml
+# application.yml 中用环境变量
+spring:
+  datasource:
+    password: ${DATABASE_PASSWORD}
+```
+
+这样密码只存在于服务器内存和运维人员的安全工具中，代码仓库里没有任何敏感信息。
+
+---
+
 [← 返回主文档](../README.md)

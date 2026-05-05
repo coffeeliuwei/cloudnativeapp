@@ -10,7 +10,8 @@
 2. [userordertest 库（订单库）](#2-userordertest-库订单库)
 3. [expresstracktest 库（快递库）](#3-expresstracktest-库快递库)
 4. [完整初始化 SQL](#4-完整初始化-sql)
-5. [数据库 ER 图](#5-数据库-er-图)
+5. [关键设计决策解析](#5-关键设计决策解析)
+6. [数据库 ER 图](#6-数据库-er-图)
 
 ---
 
@@ -238,7 +239,158 @@ INSERT INTO track (express_id, track_id, track_show) VALUES
 
 ---
 
-## 5. 数据库 ER 图
+## 5. 关键设计决策解析
+
+### 5.1 为什么用 `utf8mb4` 而不是 `utf8`？
+
+MySQL 中的 `utf8` **不是真正的 UTF-8**——这是一个历史遗留 bug。
+
+标准 UTF-8 编码最多使用 4 个字节表示一个字符。但 MySQL 的 `utf8` 实际上是"utf8mb3"，最多只支持 3 个字节。超出 3 字节的字符（如 emoji 😊、部分中文生僻字、某些数学符号）插入时会**直接报错或被截断**。
+
+| 字符集 | 最大字节/字符 | 能存 emoji？ | 能存所有中文？|
+|--------|------------|------------|------------|
+| `utf8`（MySQL）| 3 字节 | ❌ 报错 | 大部分能，偏僻字不行 |
+| `utf8mb4` | 4 字节 | ✅ | ✅ 完整支持 |
+
+**本项目所有表都使用 `utf8mb4`。** 新项目的数据库和表默认应始终选择 `utf8mb4`，没有理由再用 `utf8`。
+
+排序规则（`COLLATE`）使用 `utf8mb4_unicode_ci`：
+- `unicode`：按 Unicode 标准排序，对多语言友好
+- `ci`：case-insensitive，查询时大小写不敏感（`WHERE name = 'zhang'` 能匹配 `Zhang`）
+
+---
+
+### 5.2 为什么 `order_amount` 用 `DECIMAL` 而不是 `FLOAT` 或 `DOUBLE`？
+
+**金额类字段绝对不能用浮点类型（FLOAT / DOUBLE）**，这是数据库设计的铁律。
+
+原因是浮点数在计算机中用二进制表示，无法精确存储大多数十进制小数：
+
+```sql
+-- 浮点数的精度问题演示
+SELECT 0.1 + 0.2;   -- 结果：0.30000000000000004（不是 0.3！）
+
+-- DECIMAL 精确计算
+SELECT CAST(0.1 AS DECIMAL(10,2)) + CAST(0.2 AS DECIMAL(10,2));  -- 结果：0.30
+```
+
+`DECIMAL(10, 2)` 的含义：
+- `10`：总共最多 10 位数字
+- `2`：小数点后保留 2 位
+
+所以 `DECIMAL(10, 2)` 能存储的最大金额是 `99,999,999.99`（约一亿元），满足绝大多数业务场景。
+
+> **浮点数误差的实际危害**：电商系统中，每笔订单金额精度丢失 0.01 元，百万订单后会产生万元级别的对账差异，财务报表无法核对。
+
+---
+
+### 5.3 索引设计说明
+
+表中的索引分为两类：
+
+#### 唯一索引（UNIQUE KEY）
+
+```sql
+UNIQUE KEY uk_OneID (OneID)          -- member 表：用户唯一标识不可重复
+UNIQUE KEY uk_order_id (order_id)    -- order 表：订单号全局唯一
+UNIQUE KEY uk_express_id (express_id) -- express 表：快递单号唯一
+```
+
+唯一索引同时承担两个职责：
+1. **业务约束**：数据库层面保证字段值不重复，即使代码有 bug 也不会写入脏数据
+2. **查询加速**：按这些字段查询时，数据库走索引而非全表扫描
+
+#### 普通索引（KEY）
+
+```sql
+KEY idx_OneID (OneID)                -- order 表：按用户查所有订单
+KEY idx_order_id (order_id)          -- express 表：按订单查快递
+KEY idx_express_id (express_id)      -- track 表：按快递单查轨迹（最高频的查询）
+```
+
+普通索引的核心价值是**减少查询扫描的行数**：
+
+```
+没有索引的查询：
+SELECT * FROM track WHERE express_id = 'EX20240001'
+→ 扫描 track 表所有行，找出 express_id 匹配的
+→ 100万条数据就要比较100万次
+
+有索引的查询：
+→ 通过 B+ 树索引直接定位 express_id = 'EX20240001' 的位置
+→ 只读取匹配的几行，时间复杂度从 O(n) 降至 O(log n)
+```
+
+**哪些字段不需要建索引？**
+
+`track_show`（轨迹描述文字）不建索引——它是展示字段，业务上不会"按轨迹内容查询"，建索引浪费存储空间且降低写入性能。
+
+**索引对写操作的代价：** 每次 INSERT/UPDATE 时，数据库需要维护索引结构，写操作比无索引时稍慢。这是用写性能换读性能的取舍，对读多写少的业务（如订单查询）完全值得。
+
+---
+
+### 5.4 跨库无外键：数据一致性怎么保障？
+
+#### 为什么不设置外键？
+
+两个数据库之间（`userordertest` 和 `expresstracktest`）无法设置跨库外键——这是 MySQL 的硬性限制，外键只能在**同一个数据库**内的表之间建立。
+
+即使在同一数据库内，微服务架构中也**刻意不使用外键**，原因如下：
+
+| 原因 | 说明 |
+|------|------|
+| 性能 | 每次写操作都会触发外键约束检查，高并发时成为瓶颈 |
+| 独立部署 | 服务 A 部署新版本时，不能因为外键而影响服务 B |
+| 灵活迁移 | 某个服务换数据库（如从 MySQL 换 MongoDB），不会因外键牵连其他服务 |
+
+#### 没有外键，一致性怎么保障？
+
+**应用层约束**——在 Java 代码中保证数据完整性：
+
+```
+业务规则：快递记录必须关联到存在的订单
+
+外键方式（数据库层）：
+  INSERT INTO express (order_id = 'ORDER999') → 数据库自动报错"订单不存在"
+
+应用层方式（Java 代码）：
+  1. 先查询订单服务：orderExists = userOrderService.findByOrderId('ORDER999')
+  2. if (orderExists == null) throw new BusinessException("订单不存在")
+  3. 再插入快递记录
+```
+
+**这种方式的代价：** 如果代码有 bug 跳过了校验，脏数据会直接进库，不像外键那样被数据库强制拦截。因此需要更严格的代码审查和集成测试。
+
+---
+
+### 5.5 `order` 是 MySQL 保留字——详细说明
+
+`ORDER BY` 是 SQL 中的排序关键字，因此 `order` 被 MySQL 保留。直接使用会导致解析错误：
+
+```sql
+-- 这样写会报语法错误
+SELECT * FROM order WHERE order_id = 'ORDER001';
+-- ERROR: You have an error in your SQL syntax near 'order'
+
+-- 必须加反引号
+SELECT * FROM `order` WHERE order_id = 'ORDER001';  -- ✅ 正确
+```
+
+**本项目所有涉及 `order` 表的 SQL 都加了反引号**，包括：
+
+```xml
+<!-- UserOrderMapper.xml -->
+FROM member m, `order` o
+
+<!-- 建表语句 -->
+CREATE TABLE `order` ( ... )
+```
+
+**避免踩这个坑的好习惯：** 取表名和字段名时避开 SQL 保留字。常见的保留字陷阱：`order`、`group`、`key`、`index`、`table`、`select`、`from`、`where`。如果必须用，始终加反引号。
+
+---
+
+## 6. 数据库 ER 图
 
 ```
 userordertest 数据库

@@ -1,7 +1,7 @@
 # 前端视觉改造设计文档
 
 **日期：** 2026-05-05  
-**作者：** 刘伟  
+**作者：** coffeeliu  
 **项目：** cloudnativeapp / app-admin  
 
 ---

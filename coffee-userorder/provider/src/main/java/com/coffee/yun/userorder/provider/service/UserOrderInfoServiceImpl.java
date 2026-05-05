@@ -1,7 +1,6 @@
 package com.coffee.yun.userorder.provider.service;
 
-import cn.hutool.core.util.StrUtil;
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.coffee.yun.dto.PageDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoResultDTO;
@@ -18,12 +17,13 @@ public class UserOrderInfoServiceImpl implements UserOrderInfoService {
 
     @Autowired
     private SqlSessionTemplate sqlSessionTemplate;
+
     @Autowired
     private PageUtil pageUtil;
 
     @Override
     public UserOrderInfoResultDTO findUserOrderInfo(UserOrderInfoParamDTO userOrderInfoParamDTO) {
-        log.info("订单查询 根据用户订单ID查询订单详情：{}", JSONUtil.toJsonStr(userOrderInfoParamDTO));
+        log.info("订单查询 根据用户订单ID查询订单详情：{}", JSON.toJSONString(userOrderInfoParamDTO));
         return sqlSessionTemplate.selectOne("UserOrderMapper.selectByParam", userOrderInfoParamDTO);
     }
 

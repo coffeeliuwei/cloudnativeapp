@@ -18,10 +18,11 @@ public class CoffeeController {
 
     @DubboReference
     private UserOrderInfoService userOrderInfoService;
+
     @DubboReference
     private ExpressTrackInfoService expressTrackInfoService;
 
-    @GetMapping("/hello/{orderid}")
+    @RequestMapping("/hello/{orderid}")
     public PageDTO<ExpressTrackInfoResultDTO> helloCoffee(@PathVariable String orderid) {
         UserOrderInfoParamDTO userOrderInfoParamDTO = new UserOrderInfoParamDTO();
         userOrderInfoParamDTO.setOrder_id(orderid);
@@ -32,13 +33,11 @@ public class CoffeeController {
         return expressTrackInfoService.findExpressTrackInfos(expressTrackInfoParamDTO);
     }
 
-    @PostMapping("/findOrderList")
-    public Result<PageDTO<ExpressTrackInfoResultDTO>> findOrderList(@RequestBody UserOrderInfoParamDTO userOrderInfoParamDTO) {
+    @PostMapping("findOrderList")
+    public Result<PageDTO> findOrderList(@RequestBody UserOrderInfoParamDTO userOrderInfoParamDTO) {
         UserOrderInfoResultDTO userOrderInfoResultDTO = userOrderInfoService.findUserOrderInfo(userOrderInfoParamDTO);
         ExpressTrackInfoParamDTO expressTrackInfoParamDTO = new ExpressTrackInfoParamDTO();
         expressTrackInfoParamDTO.setOrder_id(userOrderInfoResultDTO.getOrder_id());
-        return new ResultUtil<PageDTO<ExpressTrackInfoResultDTO>>().setData(
-                expressTrackInfoService.findExpressTrackInfos(expressTrackInfoParamDTO));
+        return new ResultUtil<PageDTO>().setData(expressTrackInfoService.findExpressTrackInfos(expressTrackInfoParamDTO));
     }
-
 }

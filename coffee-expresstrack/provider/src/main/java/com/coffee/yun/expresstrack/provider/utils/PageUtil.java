@@ -1,6 +1,6 @@
 package com.coffee.yun.expresstrack.provider.utils;
 
-import cn.hutool.json.JSONUtil;
+import com.alibaba.fastjson2.JSON;
 import com.github.pagehelper.PageHelper;
 import com.github.pagehelper.PageInfo;
 import com.coffee.yun.dto.BasePageDTO;
@@ -12,21 +12,21 @@ import org.springframework.stereotype.Component;
 
 @Component
 @Slf4j
-public class PageUtil {
+public class PageUtil<T> {
 
     @Autowired
     SqlSessionTemplate sqlSessionTemplate;
 
-    public <T> PageDTO<T> selectPage(String template, BasePageDTO basePageDTO) {
-        log.info("开始分页查询 {} 参数：{}", template, JSONUtil.toJsonStr(basePageDTO));
+    public PageDTO<T> selectPage(String template, BasePageDTO basePageDTO) {
+        log.info("开始分页查询 {} 参数：{}", template, JSON.toJSONString(basePageDTO));
+        PageInfo<T> pageInfo = null;
         try {
-            PageInfo<T> pageInfo = PageHelper.startPage(basePageDTO.getPageNum(), basePageDTO.getPageSize())
+            pageInfo = PageHelper.startPage(basePageDTO.getPageNum(), basePageDTO.getPageSize())
                     .doSelectPageInfo(() -> sqlSessionTemplate.selectList(template, basePageDTO));
-            log.info("分页查询成功：total={}, pages={}", pageInfo.getTotal(), pageInfo.getPages());
-            return new PageDTO<>(pageInfo.getTotal(), pageInfo.getPages(), pageInfo.getList());
         } catch (Exception e) {
-            log.error("分页查询异常：{}", e.getMessage(), e);
-            throw e;
+            log.error("分页查询异常：{}", e.getMessage());
         }
+        log.info("分页查询成功：{}", JSON.toJSONString(pageInfo));
+        return new PageDTO<>(pageInfo.getTotal(), pageInfo.getPages(), pageInfo.getList());
     }
 }
