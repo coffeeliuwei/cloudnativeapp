@@ -42,9 +42,9 @@ export default [
         name: 'home',
         meta: {
           hideInMenu: true,
-          title: '首页',
+          title: '运营总览',
           notCache: true,
-          icon: 'md-home'
+          icon: 'md-cafe'
         },
         component: () => import('@/view/single-page/home')
       }
@@ -62,8 +62,8 @@ export default [
         path: '/order', // 必填
         name: '订单查询', // 必填
         meta: {
-          title: '订单', // 非必填   菜单名称
-          icon: 'md-briefcase'// 非必填   菜单图标
+          title: '订单管理',
+          icon: 'md-cart'
         },
         component: () => import('@/view/order/order.vue') // 必填   用来加载该路由规则对应的视图
       }

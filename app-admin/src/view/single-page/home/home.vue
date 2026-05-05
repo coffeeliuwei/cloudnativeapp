@@ -11,17 +11,20 @@
     <Row :gutter="20" style="margin-top: 10px;">
       <i-col :md="24" :lg="8" style="margin-bottom: 20px;">
         <Card shadow>
-          <chart-pie style="height: 300px;" :value="pieData" text="用户访问来源"></chart-pie>
+          <p slot="title" class="card-title">咖啡品类销售占比</p>
+          <chart-pie style="height: 300px;" :value="pieData" text="今日销售"></chart-pie>
         </Card>
       </i-col>
       <i-col :md="24" :lg="16" style="margin-bottom: 20px;">
         <Card shadow>
-          <chart-bar style="height: 300px;" :value="barData" text="每周用户活跃量"/>
+          <p slot="title" class="card-title">本周每日订单量</p>
+          <chart-bar style="height: 300px;" :value="barData" text="订单数"/>
         </Card>
       </i-col>
     </Row>
     <Row>
       <Card shadow>
+        <p slot="title" class="card-title">各时段订单趋势（本周）</p>
         <example style="height: 310px;"/>
       </Card>
     </Row>
@@ -45,28 +48,28 @@ export default {
   data () {
     return {
       inforCardData: [
-        { title: '新增用户', icon: 'md-person-add', count: 803, color: '#c8825a' },
-        { title: '累计点击', icon: 'md-locate', count: 232, color: '#7c4a2d' },
-        { title: '新增问答', icon: 'md-help-circle', count: 142, color: '#6a9e72' },
-        { title: '分享统计', icon: 'md-share', count: 657, color: '#f59e0b' },
-        { title: '新增互动', icon: 'md-chatbubbles', count: 12, color: '#9d7a5e' },
-        { title: '新增页面', icon: 'md-map', count: 14, color: '#bda998' }
+        { title: '今日订单', icon: 'md-cafe', count: 1284, color: '#c8825a' },
+        { title: '待配送', icon: 'md-bicycle', count: 47, color: '#f59e0b' },
+        { title: '今日完成', icon: 'md-checkmark-circle', count: 1237, color: '#6a9e72' },
+        { title: '总用户数', icon: 'md-people', count: 8903, color: '#7c4a2d' },
+        { title: '今日收入', icon: 'md-card', count: 9680, color: '#9d7a5e' },
+        { title: '好评率%', icon: 'md-star', count: 98, color: '#bda998' }
       ],
       pieData: [
-        { value: 335, name: '直接访问' },
-        { value: 310, name: '邮件营销' },
-        { value: 234, name: '联盟广告' },
-        { value: 135, name: '视频广告' },
-        { value: 1548, name: '搜索引擎' }
+        { value: 512, name: '拿铁' },
+        { value: 389, name: '美式' },
+        { value: 201, name: '卡布奇诺' },
+        { value: 134, name: '摩卡' },
+        { value: 48, name: '其他' }
       ],
       barData: {
-        Mon: 13253,
-        Tue: 34235,
-        Wed: 26321,
-        Thu: 12340,
-        Fri: 24643,
-        Sat: 1322,
-        Sun: 1324
+        Mon: 1021,
+        Tue: 1354,
+        Wed: 1189,
+        Thu: 982,
+        Fri: 1476,
+        Sat: 1832,
+        Sun: 1654
       }
     }
   },
@@ -84,5 +87,11 @@ export default {
 
 .ivu-card {
   border-color: #e8d8c4;
+}
+
+.card-title {
+  color: #7c4a2d;
+  font-weight: 700;
+  font-size: 14px;
 }
 </style>
