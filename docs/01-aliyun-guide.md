@@ -52,7 +52,7 @@
 1. 控制台搜索 **RDS**
 2. 点击"创建实例"
 3. 选择配置：
-   - 数据库类型：**MySQL 8.0**（项目已升级至 MySQL 8 驱动，推荐选择 8.0）
+   - 数据库类型：**MySQL 8.0**
    - 规格：最低配置即可（学习用）
    - 地域：选择离你最近的城市
 4. 完成购买，等待实例初始化（约 5 分钟）
@@ -102,9 +102,8 @@ database:
 ### 4.1 本地安装（开发环境）
 
 ```bash
-# 下载 Nacos 2.x（Dubbo 3.3.x 要求 Nacos 2.x，不兼容 1.x）
+# 下载 Nacos 2.x（推荐 2.3.x 或更高）
 # 下载地址：https://github.com/alibaba/nacos/releases
-# 推荐版本：2.3.x 或更高
 
 # 解压后，进入 bin 目录
 
@@ -114,8 +113,6 @@ startup.cmd -m standalone
 # Mac/Linux 启动
 sh startup.sh -m standalone
 ```
-
-> **版本注意**：Dubbo 3.3.x 使用 gRPC 风格的三元组协议，需要 Nacos 2.x 才能正确注册和发现服务。如果使用 Nacos 1.x，服务列表页面将看不到注册的服务。
 
 启动成功后，访问 [http://localhost:8848/nacos](http://localhost:8848/nacos)：
 - 用户名：`nacos`
@@ -168,7 +165,6 @@ sh startup.sh -m standalone
 ```xml
 <!--
     aliyun-log-logback-appender 0.1.27 配置
-    注意：0.1.16+ 版本将 <accessKey> 改名为 <accessKeySecret>
     不要把 AccessKey 直接写在这里——通过环境变量注入：
       export ALIYUN_ACCESS_KEY_ID=your_key_id
       export ALIYUN_ACCESS_KEY_SECRET=your_key_secret
@@ -182,8 +178,6 @@ sh startup.sh -m standalone
     <topic>订单</topic>
 </appender>
 ```
-
-> **配置项变更说明**：旧版本（0.1.15 及以前）使用 `<accessKey>` 标签；从 0.1.16 开始改为 `<accessKeySecret>`。当前项目使用 0.1.27，请确保使用新的标签名，否则密钥无法读取，日志会推送失败但不报错。
 
 **各地域 Endpoint 对照：**
 

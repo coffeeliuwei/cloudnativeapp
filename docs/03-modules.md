@@ -4,23 +4,6 @@
 >
 > **阅读建议**：跟着架构图的数据流方向阅读——先看前端（展示层），再看网关，最后深入微服务内部——这样能建立起完整的调用心智模型。
 
-## 技术栈版本矩阵（2025）
-
-| 组件 | 旧版本（2021）| 当前版本 | 主要变化 |
-|------|-------------|---------|---------|
-| Java | 8 | **17** | 语言特性增强，LTS 长期支持版本 |
-| Spring Boot | 2.3.x / 2.6.x | **3.3.4** | `javax.*` → `jakarta.*`，需 Java 17+ |
-| Apache Dubbo | 2.7.x | **3.3.4** | `@Reference` → `@DubboReference`，原生 Nacos 支持增强 |
-| MyBatis Spring Boot | 1.3.x | **3.0.3** | 适配 Spring Boot 3.x |
-| MySQL 驱动 | mysql-connector-java 5.1 | **mysql-connector-j 8.3.0** | groupId 变更，驱动类名变更 |
-| FastJSON | fastjson 1.2.x | **fastjson2 2.0.53** | 重写版本，安全性更好，artifactId 变更 |
-| Hutool | 4.x | **5.8.26** | API 兼容，修复历史安全漏洞 |
-| PageHelper | 1.2.x | **2.1.0** | 适配 MyBatis 3.x / Spring Boot 3.x |
-| SLS Logback Appender | 0.1.12 | **0.1.27** | `accessKey` → `accessKeySecret` 配置项 |
-| Vue.js | 2.5.x | **2.7.16** | Composition API 支持，axios 0.18 → 1.7.7 |
-
----
-
 ## 架构层次总览
 
 ```
@@ -361,7 +344,7 @@ import org.springframework.web.bind.annotation.*;
 public class CoffeeController {
 
     /**
-     * @DubboReference 是 Dubbo 3.x 的核心注解（Dubbo 2.x 用 @Reference）。
+     * @DubboReference 是 Dubbo 的核心注解。
      * 它不会在本地找这个接口的实现类，而是：
      *   1. 启动时向 Nacos 查询"谁实现了 UserOrderInfoService"
      *   2. 创建一个网络代理对象，调用它时自动走 RPC
@@ -674,10 +657,8 @@ public class UserOrderInfoServiceImpl implements UserOrderInfoService {
 |------|------|-----|---------|
 | `@Service`（Spring） | Spring 框架 | 注册到 Spring 容器 | 同一应用内的组件 |
 | `@Autowired`（Spring） | Spring 框架 | 注入本地 Bean | 同一进程内依赖注入 |
-| `@DubboService`（Dubbo 3.x）| Dubbo 框架 | 注册到 Nacos，暴露 RPC 接口 | **需要被其他应用远程调用**的服务 |
-| `@DubboReference`（Dubbo 3.x）| Dubbo 框架 | 创建远程代理，注入调用方 | **调用远程 Dubbo 服务** |
-
-> **版本说明：** Dubbo 2.x 使用 `@Service` + `@Reference`（已废弃），Dubbo 3.x 改为语义更明确的 `@DubboService` + `@DubboReference`，避免与 Spring 的 `@Service` 混淆。
+| `@DubboService` | Dubbo 框架 | 注册到 Nacos，暴露 RPC 接口 | **需要被其他应用远程调用**的服务 |
+| `@DubboReference` | Dubbo 框架 | 创建远程代理，注入调用方 | **调用远程 Dubbo 服务** |
 
 ---
 
@@ -758,7 +739,6 @@ spring:
     url: jdbc:mysql://${database.host}/${database.dbname}?serverTimezone=Asia/Shanghai&useUnicode=true&characterEncoding=utf-8&useSSL=false&allowPublicKeyRetrieval=true
     username: ${database.user}
     password: ${database.password}
-    # MySQL 8 新驱动类（旧版 com.mysql.jdbc.Driver 已废弃）
     driver-class-name: com.mysql.cj.jdbc.Driver
 
 mybatis:
@@ -1006,7 +986,6 @@ Dubbo 默认端口是 20880。本机同时运行 `coffee-userorder` 和 `coffee-
     <!--
         aliyun_sls：将日志推送到阿里云日志服务（SLS）
         使用 aliyun-log-logback-appender 0.1.27
-        注意：0.1.16+ 版本配置项 accessKey → accessKeySecret
     -->
     <appender name="aliyun_sls" class="com.aliyun.openservices.log.logback.LoghubAppender">
         <endpoint>cn-beijing.log.aliyuncs.com</endpoint>
@@ -1159,7 +1138,7 @@ PageDTO<ProductDTO> productPage = ...
         <artifactId>lombok</artifactId>
     </dependency>
 
-    <!-- FastJSON2：fastjson 的重写版本，性能更好、安全性更高（fastjson 1.x 多次出现安全漏洞）-->
+    <!-- FastJSON2：JSON 序列化库，性能更好、安全性更高 -->
     <dependency>
         <groupId>com.alibaba.fastjson2</groupId>
         <artifactId>fastjson2</artifactId>
