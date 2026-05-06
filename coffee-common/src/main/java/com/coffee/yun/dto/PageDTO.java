@@ -1,4 +1,4 @@
-﻿package com.coffee.yun.dto;
+package com.coffee.yun.dto;
 
 import java.io.Serializable;
 import java.util.List;
