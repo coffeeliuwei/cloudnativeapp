@@ -1,35 +1,83 @@
-server:
-  port: 8001
+# ============================================================
+# coffee-expresstrack 主配置文件
+# 作用：定义服务运行参数，引用 application-dev.yml 中的敏感配置。
+# 注意：此文件提交到 Git；包含真实密码的 application-dev.yml 不提交。
+# ============================================================
 
+# ── HTTP 服务端口 ──────────────────────────────────────────
+server:
+  port: 8001   # 前端/网关通过此端口访问本服务的 HTTP 接口（健康检查等）
+
+# ── Spring 基础配置 ────────────────────────────────────────
 spring:
   application:
+    # 服务名称，有两个重要用途：
+    # 1. Nacos 用此名称标识本服务（其他服务通过此名称发现本服务）
+    # 2. 日志、监控中显示的服务标识
     name: coffee-expresstrack
+
   profiles:
+    # 激活哪套配置文件。${ENV:dev} 表示：
+    # - 先读系统环境变量 ENV 的值
+    # - 如果未设置 ENV，默认使用 dev（即加载 application-dev.yml）
+    # 生产环境启动时设置 ENV=prod，则加载 application-prod.yml
     active: ${ENV:dev}
+
   jackson:
+    # 全局 JSON 日期格式，接口返回的所有日期字段统一格式化为此形式
     date-format: yyyy-MM-dd HH:mm:ss
+    # 时区设置为东八区（北京时间），防止日期字段差8小时
     time-zone: GMT+8
+
   datasource:
     name: coffee-expresstrack
+    # JDBC 连接 URL，各参数说明：
+    # ${database.host}       → 从 application-dev.yml 读取阿里云 RDS 地址
+    # ${database.dbname}     → 从 application-dev.yml 读取数据库名（expresstracktest）
+    # serverTimezone=UTC     → 数据库服务器时区（RDS默认UTC，与本地时间差8小时，由 jackson.time-zone 补偿）
+    # useUnicode=true        → 启用 Unicode 编码，支持中文
+    # characterEncoding=utf-8 → 字符集设为 UTF-8，防止中文乱码
+    # sslMode=DISABLED       → 关闭 SSL（MySQL 8.0 新参数，替代旧版 useSSL=false）
+    # allowPublicKeyRetrieval=true → MySQL 8.0 新认证插件需要此参数，否则连接报错
     url: jdbc:mysql://${database.host}/${database.dbname}?serverTimezone=UTC&useUnicode=true&characterEncoding=utf-8&sslMode=DISABLED&allowPublicKeyRetrieval=true
+    # 数据库账号和密码，从 application-dev.yml 读取，不在此处硬编码
     username: ${database.user}
     password: ${database.password}
+    # MySQL 8.0 的 JDBC 驱动类名（旧版 com.mysql.jdbc.Driver 已废弃）
     driver-class-name: com.mysql.cj.jdbc.Driver
 
+# ── MyBatis 配置 ───────────────────────────────────────────
 mybatis:
+  # Mapper XML 文件的位置，classpath 指 resources 目录
+  # *.xml 表示扫描 resources/mapper/ 目录下所有 XML 文件
   mapper-locations: classpath:mapper/*.xml
   configuration:
+    # 开发阶段打印完整 SQL 语句到控制台，方便调试
+    # 生产环境建议改为 org.apache.ibatis.logging.slf4j.Slf4jImpl（输出到日志文件）
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
 
+# ── Dubbo RPC 配置 ─────────────────────────────────────────
 dubbo:
   scan:
+    # Dubbo 扫描此包下带有 @DubboService 注解的类，将其注册为 RPC 服务提供者
     base-packages: com.coffee.yun.expresstrack
+
   application:
+    # Dubbo 服务的应用名，在 Nacos 控制台中显示，建议与 spring.application.name 保持一致
     name: coffee-expresstrack
+    # WARN 级别：发现不安全的序列化类时打印警告，但不阻止启动（STRICT 会直接拒绝）
     serialize-check-status: WARN
+
   registry:
+    # 服务注册中心地址，nacos:// 协议告诉 Dubbo 使用 Nacos 作为注册中心
+    # 127.0.0.1:8848 是本地 Nacos 地址，生产环境替换为云上 Nacos 地址
     address: nacos://127.0.0.1:8848
+
   protocol:
+    # 使用 Dubbo 私有二进制协议（比 HTTP 更高效，适合内部服务间调用）
     name: dubbo
-    # 显式指定 Dubbo RPC 端口（与 HTTP 端口 8001 不同）
+    # 显式固定 Dubbo RPC 监听端口为 28888
+    # 注意：此端口与 HTTP 端口（8001）不同，两者并行监听，职责不同：
+    # - HTTP 8001：供健康检查、运维接口使用
+    # - Dubbo 28888：供 coffee-app 通过 RPC 调用业务接口使用
     port: 28888
