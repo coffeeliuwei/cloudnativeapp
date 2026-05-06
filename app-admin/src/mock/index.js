@@ -2,11 +2,21 @@ import Mock from 'mockjs'
 import { login, logout, getUserInfo } from './login'
 import { getTableData, getDragList, uploadImage, getOrgData, getTreeSelectData } from './data'
 import { getMessageInit, getContentByMsgId, hasRead, removeReaded, restoreTrash, messageCount } from './user'
+import { findOrderList } from './order'
 
-// 配置Ajax请求延时，可用来测试网络延迟大时项目中一些效果
-Mock.setup({
-  timeout: 1000
-})
+// ===== mockjs + axios 1.x 兼容补丁 =====
+// axios 1.x 用 addEventListener('load') 代替 onload 属性；
+// mockjs 的 MockXMLHttpRequest 不实现 addEventListener，导致触发 onerror。
+// 补丁：在 Mock 拦截前把 addEventListener 代理到对应的 on* 属性。
+const _open = XMLHttpRequest.prototype.open
+XMLHttpRequest.prototype.open = function (...args) {
+  this.addEventListener = (event, handler) => {
+    this['on' + event] = handler
+  }
+  return _open.apply(this, args)
+}
+
+Mock.setup({ timeout: '10-50' })
 
 // 登录相关和获取用户信息
 Mock.mock(/\/login/, login)
@@ -24,5 +34,8 @@ Mock.mock(/\/message\/restore/, restoreTrash)
 Mock.mock(/\/message\/count/, messageCount)
 Mock.mock(/\/get_org_data/, getOrgData)
 Mock.mock(/\/get_tree_select_data/, getTreeSelectData)
+
+// 订单查询接口（开发环境后端未启动时使用 mock 数据）
+Mock.mock(/\/findOrderList/, findOrderList)
 
 export default Mock

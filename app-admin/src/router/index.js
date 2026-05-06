@@ -3,6 +3,7 @@ import routes from './routers'
 import store from '@/store'
 import { LoadingBar } from 'view-ui-plus'
 import { setToken, getToken, canTurnTo, setTitle } from '@/libs/util'
+import i18n from '@/locale'
 import config from '@/config'
 const { homeName } = config
 
@@ -53,7 +54,8 @@ router.beforeEach((to, from, next) => {
 
 router.afterEach(to => {
   LoadingBar.finish()
-  setTitle(to, router.app)
+  // Vue 3 中 router.app 不再是组件实例，用 i18n.global 代替
+  setTitle(to, { $t: i18n.global.t.bind(i18n.global) })
   window.scrollTo(0, 0)
 })
 

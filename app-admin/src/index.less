@@ -1,13 +1,77 @@
-@primary-color: #c8825a;
-@link-color: #c8825a;
-@border-radius-base: 8px;
+// ===== CoffeeTrack 咖啡主题覆盖 =====
+// ViewUI Plus 已在 main.js 中引入编译好的 CSS，
+// 这里用直接 CSS 规则覆盖主题色，替代原来的 Less 变量方式
 
-@import '~iview/src/styles/index.less';
+// 侧边栏背景（原 @layout-sider-background）
+.ivu-layout-sider,
+.ivu-layout-sider.left-sider {
+  background: #7c4a2d !important;
+}
 
-@menu-dark-title: #7c4a2d;
-@menu-dark-active-bg: #5a3420;
-@layout-sider-background: #7c4a2d;
+// 深色菜单背景（原 @menu-dark-title / @layout-sider-background）
+.ivu-menu-dark {
+  background: #7c4a2d !important;
+}
 
+// 菜单子标题
+.ivu-menu-dark .ivu-menu-submenu-title {
+  background: #7c4a2d !important;
+  color: #f0e0d0 !important;
+}
+
+// 菜单项激活背景（原 @menu-dark-active-bg）
+.ivu-menu-dark .ivu-menu-item-active:not(.ivu-menu-submenu),
+.ivu-menu-dark .ivu-menu-item-selected,
+.ivu-menu-dark.ivu-menu-vertical .ivu-menu-item-active:not(.ivu-menu-submenu) {
+  background: #5a3420 !important;
+}
+
+// 菜单展开的子菜单背景
+.ivu-menu-dark .ivu-menu-submenu-content {
+  background: #6b3c25 !important;
+}
+
+// 主色按钮（原 @primary-color）
+.ivu-btn-primary {
+  background-color: #c8825a !important;
+  border-color: #c8825a !important;
+}
+.ivu-btn-primary:hover,
+.ivu-btn-primary:focus {
+  background-color: #b8714a !important;
+  border-color: #b8714a !important;
+}
+
+// 链接色
+a {
+  color: #c8825a;
+}
+a:hover {
+  color: #b8714a;
+}
+
+// 标签页选中色
+.ivu-tabs-nav .ivu-tabs-tab-active {
+  color: #c8825a !important;
+}
+.ivu-tabs-ink-bar {
+  background-color: #c8825a !important;
+}
+
+// 卡片边框色
+.ivu-card {
+  border-color: #e8d8c4;
+}
+
+// 圆角（原 @border-radius-base）
+.ivu-btn,
+.ivu-card,
+.ivu-input,
+.ivu-select-selection {
+  border-radius: 8px;
+}
+
+// 全局背景色
 body {
   background: #fdf6ee;
 }

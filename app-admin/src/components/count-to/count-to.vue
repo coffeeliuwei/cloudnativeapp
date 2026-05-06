@@ -7,7 +7,7 @@
 </template>
 
 <script>
-import CountUp from 'countup'
+import { CountUp } from 'countup.js'
 import './index.less'
 export default {
   name: 'CountTo',
@@ -107,13 +107,10 @@ export default {
   },
   data () {
     return {
+      // Vue 3 移除了 _uid，改用随机 id
+      counterId: `count_to_${Math.random().toString(36).substr(2, 9)}`,
       counter: null,
       unitText: ''
-    }
-  },
-  computed: {
-    counterId () {
-      return `count_to_${this._uid}`
     }
   },
   methods: {
@@ -153,9 +150,13 @@ export default {
   mounted () {
     this.$nextTick(() => {
       let endVal = this.getValue(this.end)
-      this.counter = new CountUp(this.counterId, this.startVal, endVal, this.decimals, this.duration, {
+      // countup.js v2 API：new CountUp(id, endVal, options)
+      this.counter = new CountUp(this.counterId, endVal, {
+        startVal: this.startVal,
+        decimalPlaces: this.decimals,
+        duration: this.duration,
         useEasing: !this.uneasing,
-        useGrouping: this.useGroup,
+        useGrouping: this.usegroup,
         separator: this.separator,
         decimal: this.decimal
       })

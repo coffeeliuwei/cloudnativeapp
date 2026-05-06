@@ -3,7 +3,7 @@
 </template>
 
 <script>
-import echarts from 'echarts'
+import * as echarts from 'echarts'
 import { on, off } from '@/libs/tools'
 export default {
   name: 'serviceRequests',
@@ -59,7 +59,7 @@ export default {
           name: '待处理',
           type: 'line',
           stack: '总量',
-          areaStyle: { normal: { color: 'rgba(124, 74, 45, 0.5)' } },
+          areaStyle: { color: 'rgba(124, 74, 45, 0.5)' },
           lineStyle: { color: '#7c4a2d' },
           itemStyle: { color: '#7c4a2d' },
           data: [32, 28, 45, 21, 38, 19, 24]
@@ -68,7 +68,7 @@ export default {
           name: '配送中',
           type: 'line',
           stack: '总量',
-          areaStyle: { normal: { color: 'rgba(245, 158, 11, 0.45)' } },
+          areaStyle: { color: 'rgba(245, 158, 11, 0.45)' },
           lineStyle: { color: '#f59e0b' },
           itemStyle: { color: '#f59e0b' },
           data: [187, 245, 198, 227, 312, 278, 256]
@@ -77,7 +77,7 @@ export default {
           name: '已完成',
           type: 'line',
           stack: '总量',
-          areaStyle: { normal: { color: 'rgba(106, 158, 114, 0.5)' } },
+          areaStyle: { color: 'rgba(106, 158, 114, 0.5)' },
           lineStyle: { color: '#6a9e72' },
           itemStyle: { color: '#6a9e72' },
           data: [756, 1045, 912, 698, 1089, 1487, 1342]
@@ -86,10 +86,8 @@ export default {
           name: '已取消',
           type: 'line',
           stack: '总量',
-          label: {
-            normal: { show: true, position: 'top', color: '#9d7a5e' }
-          },
-          areaStyle: { normal: { color: 'rgba(200, 130, 90, 0.35)' } },
+          label: { show: true, position: 'top', color: '#9d7a5e' },
+          areaStyle: { color: 'rgba(200, 130, 90, 0.35)' },
           lineStyle: { color: '#c8825a' },
           itemStyle: { color: '#c8825a' },
           data: [12, 18, 9, 15, 22, 11, 8]

@@ -17,13 +17,21 @@ const USER_MAP = {
 }
 
 export const login = req => {
-  req = JSON.parse(req.body)
-  return { token: USER_MAP[req.userName].token }
+  try {
+    const body = typeof req.body === 'string' ? JSON.parse(req.body) : (req.body || {})
+    return { token: USER_MAP[body.userName] ? USER_MAP[body.userName].token : 'admin' }
+  } catch (e) {
+    return { token: 'admin' }
+  }
 }
 
 export const getUserInfo = req => {
-  const params = getParams(req.url)
-  return USER_MAP[params.token]
+  try {
+    const params = getParams(req.url)
+    return USER_MAP[params.token] || USER_MAP['admin']
+  } catch (e) {
+    return USER_MAP['admin']
+  }
 }
 
 export const logout = req => {

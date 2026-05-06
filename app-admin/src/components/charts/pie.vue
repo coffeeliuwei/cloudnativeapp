@@ -48,8 +48,8 @@ export default {
             radius: '55%',
             center: ['50%', '60%'],
             data: this.value,
-            itemStyle: {
-              emphasis: {
+            emphasis: {
+              itemStyle: {
                 shadowBlur: 10,
                 shadowOffsetX: 0,
                 shadowColor: 'rgba(0, 0, 0, 0.5)'

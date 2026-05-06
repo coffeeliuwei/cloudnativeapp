@@ -53,11 +53,11 @@ class HttpRequest {
       this.destroy(url)
       let errorInfo = error.response
       if (!errorInfo) {
-        const { request: { statusText, status }, config } = JSON.parse(JSON.stringify(error))
+        // axios 1.x 中 error.request 是 XHR 对象，不可直接 JSON.stringify
         errorInfo = {
-          statusText,
-          status,
-          request: { responseURL: config.url }
+          statusText: error.message || 'Network Error',
+          status: error.code || 0,
+          request: { responseURL: error.config ? error.config.url : url }
         }
       }
       addErrorLog(errorInfo)

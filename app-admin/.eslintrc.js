@@ -16,6 +16,7 @@ module.exports = {
     'camelcase': 'off'
   },
   parserOptions: {
-    parser: 'babel-eslint'
+    parser: '@babel/eslint-parser',
+    requireConfigFile: false
   }
 }

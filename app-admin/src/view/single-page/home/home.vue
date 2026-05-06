@@ -11,20 +11,20 @@
     <Row :gutter="20" style="margin-top: 10px;">
       <i-col :md="24" :lg="8" style="margin-bottom: 20px;">
         <Card shadow>
-          <p slot="title" class="card-title">订单状态分布</p>
+          <template #title><p class="card-title">订单状态分布</p></template>
           <chart-pie style="height: 300px;" :value="pieData" text="当前订单"></chart-pie>
         </Card>
       </i-col>
       <i-col :md="24" :lg="16" style="margin-bottom: 20px;">
         <Card shadow>
-          <p slot="title" class="card-title">本周每日订单量</p>
+          <template #title><p class="card-title">本周每日订单量</p></template>
           <chart-bar style="height: 300px;" :value="barData" text="订单数"/>
         </Card>
       </i-col>
     </Row>
     <Row>
       <Card shadow>
-        <p slot="title" class="card-title">各时段订单量趋势（本周）</p>
+        <template #title><p class="card-title">各时段订单量趋势（本周）</p></template>
         <example style="height: 310px;"/>
       </Card>
     </Row>
