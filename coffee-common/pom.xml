@@ -81,15 +81,10 @@
 
     <distributionManagement>
         <snapshotRepository>
-            <id>rdc-snapshots</id>
-            <name>Internal Snapshots</name>
-            <url>https://packages.aliyun.com/maven/repository/2155594-snapshot-TdIeDl/</url>
+            <id>2643746-snapshot-a6HsOJ</id>
+            <name>云效 Snapshot 仓库</name>
+            <url>https://packages.aliyun.com/699e67ca9df7fdfa65468b27/maven/2643746-snapshot-a6hsoj</url>
         </snapshotRepository>
-        <repository>
-            <id>rdc-releases</id>
-            <name>Internal Release</name>
-            <url>https://packages.aliyun.com/maven/repository/2155594-release-85iR11/</url>
-        </repository>
     </distributionManagement>
 
 </project>
