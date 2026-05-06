@@ -162,7 +162,7 @@ export default {
   mounted () {
     on(document, 'contextmenu', this.handleDocumentContextmenu)
   },
-  beforeDestroy () {
+  beforeUnmount () {
     off(document, 'contextmenu', this.handleDocumentContextmenu)
   }
 }

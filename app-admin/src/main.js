@@ -1,52 +1,38 @@
-// The Vue build version to load with the `import` command
-// (runtime-only or standalone) has been set in webpack.base.conf with an alias.
-import Vue from 'vue'
+import { createApp } from 'vue'
 import App from './App'
 import router from './router'
 import store from './store'
-import iView from 'iview'
+import ViewUIPlus from 'view-ui-plus'
 import i18n from '@/locale'
 import config from '@/config'
 import importDirective from '@/directive'
-import { directive as clickOutside } from 'v-click-outside-x'
 import installPlugin from '@/plugin'
 import './index.less'
 import '@/assets/icons/iconfont.css'
-import TreeTable from 'tree-table-vue'
-import VOrgTree from 'v-org-tree'
-import 'v-org-tree/dist/v-org-tree.css'
+import 'view-ui-plus/dist/styles/viewuiplus.css'
+
 // 实际打包时应该不引入mock
 /* eslint-disable */
 if (process.env.NODE_ENV !== 'production') require('@/mock')
 
-Vue.use(iView, {
-  i18n: (key, value) => i18n.t(key, value)
-})
-Vue.use(TreeTable)
-Vue.use(VOrgTree)
-/**
- * @description 注册admin内置插件
- */
-installPlugin(Vue)
-/**
- * @description 生产环境关掉提示
- */
-Vue.config.productionTip = false
-/**
- * @description 全局注册应用配置
- */
-Vue.prototype.$config = config
-/**
- * 注册指令
- */
-importDirective(Vue)
-Vue.directive('clickOutside', clickOutside)
+const app = createApp(App)
 
-/* eslint-disable no-new */
-new Vue({
-  el: '#app',
-  router,
-  i18n,
-  store,
-  render: h => h(App)
+// 注册 ViewUI Plus，并接入 vue-i18n
+app.use(ViewUIPlus, {
+  i18n: (key, value) => i18n.global.t(key, value)
 })
+
+app.use(router)
+app.use(store)
+app.use(i18n)
+
+// 全局注册应用配置（Vue 3 用 globalProperties 替代 Vue.prototype）
+app.config.globalProperties.$config = config
+
+// 注册自定义指令
+importDirective(app)
+
+// 注册 admin 内置插件
+installPlugin(app)
+
+app.mount('#app')

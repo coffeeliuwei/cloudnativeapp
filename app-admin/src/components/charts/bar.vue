@@ -51,7 +51,7 @@ export default {
       on(window, 'resize', this.resize)
     })
   },
-  beforeDestroy () {
+  beforeUnmount () {
     off(window, 'resize', this.resize)
   }
 }

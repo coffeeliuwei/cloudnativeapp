@@ -47,7 +47,7 @@ export default {
     on(this.containerEle, 'scroll', this.handleScroll)
     on(this.containerEle, 'resize', this.handleScroll)
   },
-  beforeDestroy () {
+  beforeUnmount () {
     // window.removeEventListener('scroll', this.handleScroll, false)
     // window.removeEventListener('resize', this.handleScroll, false)
     off(this.containerEle, 'scroll', this.handleScroll)

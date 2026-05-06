@@ -107,7 +107,7 @@ export default {
   },
   methods: {
     handleInput (status) {
-      this.$emit('input', status)
+      this.$emit('update:modelValue', status)
     },
     handleTriggerMousedown (event) {
       this.canMove = true
@@ -148,7 +148,7 @@ export default {
     on(document, 'mouseup', this.handleMouseup)
     this.setWrapperWidth()
   },
-  beforeDestroy () {
+  beforeUnmount () {
     off(document, 'mousemove', this.handleMousemove)
     off(document, 'mouseup', this.handleMouseup)
   }

@@ -18,7 +18,7 @@
     </div>
     <div class="drag-drawer-inner-box">
       <drag-drawer v-model="showContainerBDrawer"
-        :width.sync="width2"
+        v-model:width="width2"
         min-width="30px"
         :inner="true"
         :transfer="false"
@@ -38,7 +38,7 @@
       </drag-drawer>
     </div>
     <drag-drawer v-model="showWindowBDrawer"
-      :width.sync="width1"
+      v-model:width="width1"
       :min-width="300"
       :placement="placementComputed"
       :draggable="draggable"
