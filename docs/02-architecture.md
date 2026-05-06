@@ -117,7 +117,7 @@ my-shop/
              └─────────────────────────────┘
 ```
 
-<iframe src="./architecture.html" width="100%" height="900" style="border:none;border-radius:12px;"></iframe>
+👉 [查看完整可视化框架图（含代码文件细节、端口、Nacos 流向）](./architecture.html)
 
 ---
 
