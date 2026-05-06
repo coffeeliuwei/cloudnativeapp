@@ -458,6 +458,10 @@ coffee-app 下次调用时：
 └──────────────────┘ └──────────────────┘
 ```
 
+以下是包含代码文件细节的完整可视化框架图（含各模块内部结构、端口、Nacos 注册/发现流向、数据库连接）：
+
+<iframe src="./architecture.html" width="100%" height="900" style="border:none;border-radius:12px;"></iframe>
+
 **依赖规则（重要！）：**
 
 1. `coffee-common` 不依赖任何项目模块（最底层基础库）
