@@ -9,7 +9,7 @@
 ```
 ┌──────────────────────────────────────────────────────────┐
 │  第1层：展示层（app-admin）                                │
-│  Vue.js 2 + iView UI  端口:8080                          │
+│  Vue.js 3 + ViewUI Plus  端口:8080                       │
 │  用户直接看到的管理界面                                     │
 └──────────────────────────┬───────────────────────────────┘
                            │ HTTP REST（Axios 发起）
@@ -30,7 +30,7 @@
 
 | 模块 | 层次 | 技术 | 端口 |
 |------|------|------|------|
-| [app-admin](#1-展示层--app-admin) | 展示层 | Vue.js 2.7 + iView UI 4 | 8080 |
+| [app-admin](#1-展示层--app-admin) | 展示层 | Vue.js 3.4 + ViewUI Plus 1.x | 8080 |
 | [coffee-app](#2-网关层--coffee-app) | 网关层 | Spring Boot | 8005 |
 | [coffee-userorder](#3-微服务层--coffee-userorder用户订单微服务) | 微服务层 | Spring Boot + Dubbo + MyBatis | 7001 |
 | [coffee-expresstrack](#4-微服务层--coffee-expresstrack快递轨迹微服务) | 微服务层 | Spring Boot + Dubbo + MyBatis | HTTP:8001 / Dubbo:28888 |
@@ -42,7 +42,7 @@
 
 ### 定位与职责
 
-`app-admin` 是用户直接使用的管理后台界面。它基于开源模板 **iview-admin**（Vue.js 2.7 + iView UI 4）构建，负责：
+`app-admin` 是用户直接使用的管理后台界面。它基于 **Vue.js 3.4 + ViewUI Plus**（iView 的 Vue 3 兼容版本）构建，负责：
 
 - 呈现订单和快递轨迹数据（从 `coffee-app` 获取）
 - 提供查询表单，收集用户输入并发起 HTTP 请求
@@ -78,25 +78,49 @@ app-admin/
 ### src/main.js — 应用入口
 
 ```javascript
-import Vue from 'vue'
-import App from './App.vue'
-import router from './router'   // 路由
-import store from './store'     // 状态管理
-import iView from 'iview'       // UI 组件库
-import axios from 'axios'
+import { createApp } from 'vue'      // Vue 3：用 createApp() 取代 new Vue()
+import App from './App'
+import router from './router'        // vue-router 4.x
+import store from './store'          // vuex 4.x
+import ViewUIPlus from 'view-ui-plus' // ViewUI Plus（iView 的 Vue 3 版本）
+import i18n from '@/locale'          // vue-i18n 9.x
+import config from '@/config'
+import importDirective from '@/directive'
+import installPlugin from '@/plugin'
+import './index.less'
+import 'view-ui-plus/dist/styles/viewuiplus.css'
 
-Vue.use(iView)
-Vue.prototype.$axios = axios    // 挂载到 Vue 原型，组件内用 this.$axios 调用
+const app = createApp(App)
 
-new Vue({
-  el: '#app',       // 挂载到 index.html 中 id="app" 的元素
-  router,
-  store,
-  render: h => h(App)
+// 注册 ViewUI Plus，并接入 vue-i18n 国际化
+app.use(ViewUIPlus, {
+  i18n: (key, value) => i18n.global.t(key, value)
 })
+
+app.use(router)
+app.use(store)
+app.use(i18n)
+
+// Vue 3：用 globalProperties 替代 Vue 2 的 Vue.prototype
+app.config.globalProperties.$config = config
+
+// 注册自定义指令和插件
+importDirective(app)
+installPlugin(app)
+
+app.mount('#app')  // 挂载到 index.html 中 id="app" 的元素
 ```
 
-**关键点：** `Vue.prototype.$axios = axios` 让每个 Vue 组件都可以通过 `this.$axios` 发起 HTTP 请求，不需要在每个文件里单独 `import`。
+**Vue 2 → Vue 3 核心变化：**
+
+| Vue 2 写法 | Vue 3 写法 | 说明 |
+|-----------|-----------|------|
+| `new Vue({ el: '#app' })` | `createApp(App).mount('#app')` | 应用实例创建方式 |
+| `Vue.prototype.$xxx = ...` | `app.config.globalProperties.$xxx = ...` | 全局属性挂载 |
+| `import iView from 'iview'` | `import ViewUIPlus from 'view-ui-plus'` | UI 组件库升级 |
+| `Vue.use(iView)` | `app.use(ViewUIPlus, { i18n: ... })` | 插件注册方式 |
+
+**关键点：** API 发起请求在本项目中通过 `src/api/index.js` 封装，各组件直接 `import` 对应函数调用，无需挂载到全局。
 
 ---
 
@@ -182,73 +206,101 @@ export default {
 
 ### src/view/order/order.vue — 订单查询页
 
-这是本项目最核心的业务页面，调用 `coffee-app` 的接口展示快递轨迹：
+这是本项目最核心的业务页面，调用 `coffee-app` 的接口展示快递轨迹。组件逻辑抽离到 `order.js`，`order.vue` 只保留模板：
 
 ```vue
+<!-- order.vue：只负责 HTML 结构，逻辑在 order.js -->
 <template>
-  <!-- template：页面的 HTML 结构 -->
   <div class="order-page">
-    <!-- iView 组件：输入框和按钮 -->
-    <Input v-model="searchOrderId"
-           placeholder="输入订单号，如 ORDER001"
-           style="width: 300px" />
-    <Button type="primary" @click="search" :loading="loading">查询</Button>
-
-    <!-- iView 组件：数据表格 -->
-    <Table :columns="columns" :data="trackList" border />
+    <!-- 查询条件行 -->
+    <Row>
+      <Form ref="searchForm" :model="searchForm" inline class="search-form">
+        <FormItem>
+          <!-- ViewUI Plus 组件：输入框（与 iView 同名，API 兼容） -->
+          <Input type="text" v-model="searchForm.order_id"
+                 clearable placeholder="输入订单号" style="width: 200px" />
+        </FormItem>
+        <FormItem>
+          <Button type="primary" @click="handleSubmit">搜索</Button>
+        </FormItem>
+      </Form>
+    </Row>
+    <!-- 数据表格 + 分页 -->
+    <Row>
+      <Table stripe border :columns="columns" :data="data"
+             @on-row-click="getTrip" />
+      <Row type="flex" justify="end" class="page">
+        <Page :current="searchForm.pageNum" :total="total"
+              :page-size="searchForm.pageSize"
+              :page-size-opts="[10,20,50]"
+              size="small" show-total show-elevator show-sizer />
+      </Row>
+    </Row>
   </div>
 </template>
 
 <script>
+import vm from './order.js'  // 逻辑复用：将 Options 对象抽到单独的 js 文件
+export default vm
+</script>
+```
+
+```javascript
+// order.js：组件的 Options API 逻辑（Vue 3 完全兼容 Options API）
+import { findOrderList } from '@/api/index'
+
 export default {
-  name: 'OrderPage',
   data() {
     return {
-      searchOrderId: '',  // v-model 双向绑定输入框的值
-      loading: false,     // 控制按钮 loading 状态
-      trackList: [],      // 表格数据（快递轨迹列表）
-      columns: [          // 表格列定义
-        { title: '订单号',   key: 'order_id' },
-        { title: '快递单号', key: 'express_id' },
+      searchForm: { pageNum: 1, pageSize: 10, order_id: '' },
+      columns: [
+        { type: 'index', width: 60, align: 'center', fixed: 'left' },
+        { title: '订单编号', key: 'order_id' },
+        { title: '快递编号', key: 'express_id' },
         { title: '重量',     key: 'express_weight' },
-        { title: '轨迹ID',   key: 'track_id' },
-        { title: '轨迹详情', key: 'track_show', minWidth: 300 }
-      ]
+        { title: '轨迹',     key: 'track_show' }
+      ],
+      data: [],
+      total: 0
     }
   },
+  mounted() {
+    this.getOrderList()
+  },
   methods: {
-    async search() {
-      if (!this.searchOrderId) return
-      this.loading = true
-      try {
-        // 调用 coffee-app 接口：GET /hello/{orderid}
-        const res = await this.$axios.get(
-          `/hello/${this.searchOrderId}`
-        )
-        // res.data 是后端返回的 PageDTO：{ list: [...], total: 5 }
-        this.trackList = res.data.list || []
-      } finally {
-        this.loading = false
-      }
+    handleSubmit() {
+      this.searchForm.pageNum = 1
+      this.getOrderList()
+    },
+    getOrderList() {
+      // findOrderList 封装了 POST /findOrderList 接口调用
+      findOrderList(this.searchForm).then(res => {
+        const body = res.data
+        if (body && body.success === true) {
+          this.data = body.result.list   // 后端 PageDTO.list
+          this.total = body.result.total // 后端 PageDTO.total
+        }
+      })
+    },
+    getTrip(row) {
+      // 点击行时记录选中项（可扩展详情弹窗）
+      this.chooseItem = row
     }
   }
 }
-</script>
-
-<style scoped>
-/* scoped：样式只作用于当前组件，不影响其他页面 */
-.order-page { padding: 20px; }
-</style>
 ```
 
 **Vue 核心概念一览：**
 
 | 概念 | 代码体现 | 含义 |
 |------|---------|------|
-| 双向绑定 | `v-model="searchOrderId"` | 输入框和变量自动同步 |
-| 事件绑定 | `@click="search"` | 点击按钮执行 search 方法 |
-| 属性绑定 | `:data="trackList"` | 表格数据来自 trackList 变量 |
-| 响应式 | `this.trackList = res.data.list` | 赋值后页面自动刷新，无需手动操作 DOM |
+| 双向绑定 | `v-model="searchForm.order_id"` | 输入框和变量自动同步 |
+| 事件绑定 | `@click="handleSubmit"` | 点击按钮执行 handleSubmit 方法 |
+| 属性绑定 | `:data="data"` | 表格数据来自 data 变量 |
+| 响应式 | `this.data = body.result.list` | 赋值后页面自动刷新，无需手动操作 DOM |
+| 生命周期 | `mounted()` | 组件挂载后自动发起首次查询 |
+
+> **Vue 3 兼容性说明：** Vue 3 完全支持 Options API（`data / methods / mounted`），不强制使用 Composition API。ViewUI Plus 的组件名（`<Input>`、`<Button>`、`<Table>`、`<Page>`）与 iView 保持一致，迁移无需修改模板。
 
 ---
 

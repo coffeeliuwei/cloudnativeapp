@@ -35,7 +35,7 @@
 | 云数据库 | 阿里云 RDS MySQL | 第6章 |
 | 日志收集 | 阿里云日志服务 SLS | 第7章 |
 | 制品管理 | 阿里云制品库（Maven 私服）| 第8章 |
-| 前端框架 | Vue.js 2.7 + iView UI 4 | 第9章 |
+| 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第9章 |
 
 ---
 
@@ -43,10 +43,10 @@
 
 ```
 后端                               前端
-├── Java 17                        ├── Vue.js 2.7
-├── Spring Boot 3.3.4              ├── iView UI 4.x
-├── Apache Dubbo 3.3.4（RPC）       ├── Vuex（状态管理）
-├── Nacos 2.x（注册中心）            ├── Vue Router（路由）
+├── Java 17                        ├── Vue.js 3.4
+├── Spring Boot 3.3.4              ├── ViewUI Plus 1.x（UI 组件库）
+├── Apache Dubbo 3.3.4（RPC）       ├── Vuex 4.x（状态管理）
+├── Nacos 2.x（注册中心）            ├── Vue Router 4.x（路由）
 ├── MyBatis 3.x（ORM）              └── Axios 1.x（HTTP 请求）
 ├── MySQL 8.0
 └── Maven（构建）                   阿里云
