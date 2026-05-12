@@ -71,7 +71,7 @@ dubbo:
   registry:
     # 服务注册中心地址，nacos:// 协议告诉 Dubbo 使用 Nacos 作为注册中心
     # 127.0.0.1:8848 是本地 Nacos 地址，生产环境替换为云上 Nacos 地址
-    address: nacos://127.0.0.1:8848
+    address: nacos://mse-61d98fb0-p.nacos-ans.mse.aliyuncs.com:8848
 
   protocol:
     # 使用 Dubbo 私有二进制协议（比 HTTP 更高效，适合内部服务间调用）

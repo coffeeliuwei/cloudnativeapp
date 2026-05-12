@@ -68,6 +68,16 @@
             <version>${dubbo.version}</version>
         </dependency>
 
+        <!--
+            Dubbo 3.3.x 初始化服务反射时依赖 protobuf-java，但 dubbo-common 将其声明为
+            optional（不传递给下游），必须显式引入，否则启动时抛 NoClassDefFoundError
+        -->
+        <dependency>
+            <groupId>com.google.protobuf</groupId>
+            <artifactId>protobuf-java</artifactId>
+            <version>3.25.3</version>
+        </dependency>
+
         <!-- Nacos 客户端 2.x（兼容 Nacos 2.x 服务端） -->
         <dependency>
             <groupId>com.alibaba.nacos</groupId>
