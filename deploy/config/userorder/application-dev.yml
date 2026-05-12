@@ -1,0 +1,7 @@
+# coffee-userorder 数据库配置
+# 将下面的值替换为你自己的 RDS 连接信息
+database:
+  user: ${DB_USER:yourDbUser}
+  password: ${DB_PASSWORD:yourDbPassword}
+  host: ${DB_HOST:your-rds-address.mysql.rds.aliyuncs.com:3306}
+  dbname: ${DB_NAME:userordertest}

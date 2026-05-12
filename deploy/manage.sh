@@ -1,0 +1,203 @@
+#!/bin/bash
+# =============================================================
+# Coffee 微服务一键管理脚本
+# 用法：
+#   ./manage.sh start    启动所有服务
+#   ./manage.sh stop     停止所有服务
+#   ./manage.sh restart  重启所有服务
+#   ./manage.sh status   查看运行状态
+#   ./manage.sh logs     实时查看日志（Ctrl+C 退出）
+# =============================================================
+
+# ┌─────────────────────────────────────────────────────────┐
+# │              ★ 学生必填配置区 ★                          │
+# │  将下面的 Nacos 地址替换为你自己的 MSE Nacos 公网地址    │
+# └─────────────────────────────────────────────────────────┘
+NACOS_ADDR="mse-xxxxxxxx-p.nacos-ans.mse.aliyuncs.com:8848"
+
+# ─── 目录配置（通常不需要修改）────────────────────────────
+BASE_DIR=$(cd "$(dirname "$0")" && pwd)
+JARS_DIR="$BASE_DIR/jars"
+LOGS_DIR="$BASE_DIR/logs"
+CONFIG_DIR="$BASE_DIR/config"
+
+# ─── 服务定义 ──────────────────────────────────────────────
+# 格式：[服务名]="JAR文件名 HTTP端口"
+declare -A SVC_JAR
+SVC_JAR[userorder]="coffee-userorder-provider-1.0-SNAPSHOT.jar"
+SVC_JAR[expresstrack]="coffee-expresstrack-provider-1.0-SNAPSHOT.jar"
+SVC_JAR[app]="coffee-app-0.0.1-SNAPSHOT.jar"
+
+declare -A SVC_PORT
+SVC_PORT[userorder]=7001
+SVC_PORT[expresstrack]=8001
+SVC_PORT[app]=8005
+
+# 启动顺序：先启动两个 Provider，最后启动 App（消费者）
+START_ORDER=(userorder expresstrack app)
+
+# =============================================================
+# 内部函数
+# =============================================================
+
+_pid_file() { echo "$BASE_DIR/$1.pid"; }
+_log_file()  { echo "$LOGS_DIR/$1.log"; }
+
+_get_pid() {
+    local f
+    f=$(_pid_file "$1")
+    [ -f "$f" ] && cat "$f"
+}
+
+_is_running() {
+    local pid
+    pid=$(_get_pid "$1")
+    [ -n "$pid" ] && kill -0 "$pid" 2>/dev/null
+}
+
+_start_one() {
+    local name=$1
+    local jar="$JARS_DIR/${SVC_JAR[$name]}"
+    local port="${SVC_PORT[$name]}"
+    local log
+    log=$(_log_file "$name")
+    local pid_file
+    pid_file=$(_pid_file "$name")
+
+    # 检查 JAR 是否存在
+    if [ ! -f "$jar" ]; then
+        echo "  [✗] $name: JAR 不存在 → $jar"
+        return 1
+    fi
+
+    # 已在运行
+    if _is_running "$name"; then
+        echo "  [~] $name: 已运行 (PID=$(cat "$pid_file"), 端口=$port)"
+        return 0
+    fi
+
+    # 构建启动参数
+    local extra_args="--dubbo.registry.address=nacos://$NACOS_ADDR"
+
+    # userorder / expresstrack 加载各自的外部 application-dev.yml
+    if [ "$name" != "app" ]; then
+        extra_args="$extra_args --spring.config.additional-location=file:$CONFIG_DIR/$name/"
+    fi
+
+    echo "  [→] $name: 正在启动（端口=$port）..."
+    nohup java -jar "$jar" $extra_args > "$log" 2>&1 &
+    local pid=$!
+    echo "$pid" > "$pid_file"
+
+    # 等待最多 30 秒确认端口监听
+    local i=0
+    while [ $i -lt 30 ]; do
+        sleep 1
+        if ss -tlnp 2>/dev/null | grep -q ":$port "; then
+            echo "  [✓] $name: 启动成功 (PID=$pid, 端口=$port)"
+            return 0
+        fi
+        i=$((i+1))
+    done
+
+    echo "  [!] $name: 30 秒内未监听到端口 $port，请检查日志: $log"
+    return 1
+}
+
+_stop_one() {
+    local name=$1
+    local pid_file
+    pid_file=$(_pid_file "$name")
+
+    if ! _is_running "$name"; then
+        echo "  [~] $name: 未运行"
+        rm -f "$pid_file"
+        return
+    fi
+
+    local pid
+    pid=$(cat "$pid_file")
+    kill "$pid" 2>/dev/null
+    local i=0
+    while kill -0 "$pid" 2>/dev/null && [ $i -lt 15 ]; do
+        sleep 1; i=$((i+1))
+    done
+    kill -9 "$pid" 2>/dev/null
+    rm -f "$pid_file"
+    echo "  [✓] $name: 已停止 (PID=$pid)"
+}
+
+_status_one() {
+    local name=$1
+    local port="${SVC_PORT[$name]}"
+    if _is_running "$name"; then
+        local pid
+        pid=$(_get_pid "$name")
+        echo "  [✓] $name: 运行中 (PID=$pid, 端口=$port)"
+    else
+        echo "  [✗] $name: 未运行"
+    fi
+}
+
+# =============================================================
+# 主命令
+# =============================================================
+
+do_start() {
+    echo ">>> 启动所有服务（Nacos: $NACOS_ADDR）"
+    mkdir -p "$LOGS_DIR"
+    for name in "${START_ORDER[@]}"; do
+        _start_one "$name"
+    done
+    echo ""
+    do_status
+}
+
+do_stop() {
+    echo ">>> 停止所有服务"
+    for name in "${START_ORDER[@]}"; do
+        _stop_one "$name"
+    done
+}
+
+do_restart() {
+    do_stop
+    sleep 2
+    do_start
+}
+
+do_status() {
+    echo ">>> 服务状态"
+    for name in "${START_ORDER[@]}"; do
+        _status_one "$name"
+    done
+}
+
+do_logs() {
+    echo ">>> 实时日志（Ctrl+C 退出）"
+    echo "--- userorder (7001) ---  --- expresstrack (8001) ---  --- app (8005) ---"
+    tail -f "$LOGS_DIR/userorder.log" "$LOGS_DIR/expresstrack.log" "$LOGS_DIR/app.log" 2>/dev/null \
+        || echo "日志文件不存在，请先执行 ./manage.sh start"
+}
+
+# =============================================================
+# 入口
+# =============================================================
+
+case "$1" in
+    start)   do_start   ;;
+    stop)    do_stop    ;;
+    restart) do_restart ;;
+    status)  do_status  ;;
+    logs)    do_logs    ;;
+    *)
+        echo "用法: $0 {start|stop|restart|status|logs}"
+        echo ""
+        echo "  start    启动所有服务"
+        echo "  stop     停止所有服务"
+        echo "  restart  重启所有服务"
+        echo "  status   查看运行状态"
+        echo "  logs     实时查看日志（Ctrl+C 退出）"
+        exit 1
+        ;;
+esac
