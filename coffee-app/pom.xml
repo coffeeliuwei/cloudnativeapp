@@ -17,7 +17,7 @@
     <description>coffee-app — API 网关，对外暴露 REST 接口，内部通过 Dubbo 聚合微服务</description>
 
     <properties>
-        <java.version>17</java.version>
+        <java.version>11</java.version>
         <dubbo.version>2.7.23</dubbo.version>
     </properties>
 
