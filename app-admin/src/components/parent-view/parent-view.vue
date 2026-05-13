@@ -1,7 +1,9 @@
 <template>
-  <keep-alive :include="cacheList" :exclude="notCacheName">
-    <router-view ref="child"/>
-  </keep-alive>
+  <router-view v-slot="{ Component }">
+    <keep-alive :include="cacheList" :exclude="notCacheName">
+      <component :is="Component" ref="child"/>
+    </keep-alive>
+  </router-view>
 </template>
 <script>
 export default {

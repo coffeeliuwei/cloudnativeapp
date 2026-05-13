@@ -1,27 +1,35 @@
 import Mock from 'mockjs'
 
-const statusMap = ['待支付', '已支付', '已发货', '已完成', '已取消']
+const trackSteps = ['已揽收', '运输中', '派送中', '已签收']
 
-export const findOrderList = () => {
-  const list = Mock.mock({
-    'list|10-20': [{
-      'orderId|+1': 1000,
-      orderNo: /ORD-20[2-9][0-9][0-1][0-9][0-3][0-9]-[0-9]{6}/,
-      'userId|100-999': 1,
-      userName: '@cname',
-      'totalAmount|50-9999.2': 1,
-      'status|0-4': 0,
-      createTime: '@datetime("yyyy-MM-dd HH:mm:ss")',
-      'itemCount|1-10': 1
-    }]
-  })
+const makeOrder = (orderId) => ({
+  order_id: orderId || Mock.Random.integer(100000, 999999),
+  express_id: Mock.mock(/SF[0-9]{12}/),
+  express_weight: parseFloat(Mock.Random.float(0.1, 30, 1, 1)),
+  track_show: trackSteps[Mock.Random.integer(0, 3)]
+})
 
+export const findOrderList = (options) => {
+  let body = {}
+  try { body = JSON.parse(options.body) } catch (e) { /* ignore */ }
+
+  const { order_id, pageSize = 10 } = body
+
+  // 有订单号时只返回精确匹配的一条
+  if (order_id) {
+    const matched = makeOrder(parseInt(order_id))
+    return {
+      success: true,
+      result: { list: [matched], total: 1 }
+    }
+  }
+
+  const list = Array.from({ length: pageSize }, () => makeOrder())
   return {
-    code: 200,
-    message: 'success',
-    data: list.list.map(item => ({
-      ...item,
-      statusText: statusMap[item.status]
-    }))
+    success: true,
+    result: {
+      list,
+      total: Mock.Random.integer(50, 200)
+    }
   }
 }

@@ -17,8 +17,8 @@ export default {
    * @description api请求基础路径
    */
   baseUrl: {
-    dev: '/',
-    pro: 'https://produce.com'
+    dev: 'http://localhost:8005',
+    pro: process.env.VUE_APP_BASE_URL || 'http://localhost:8005'
   },
   /**
    * @description 默认打开的首页的路由name值，默认为home

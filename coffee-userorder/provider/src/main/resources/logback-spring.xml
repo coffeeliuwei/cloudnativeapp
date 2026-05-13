@@ -30,6 +30,7 @@
     -->
     <springProfile name="prod">
         <appender name="aliyun_sls" class="com.aliyun.openservices.log.logback.LoghubAppender">
+
             <!-- 阿里云 SLS 接入点，按实际 Region 修改 -->
             <endpoint>cn-beijing.log.aliyuncs.com</endpoint>
             <accessKeyId>${ALIYUN_ACCESS_KEY_ID}</accessKeyId>
@@ -52,6 +53,7 @@
             <timeZone>Asia/Shanghai</timeZone>
         </appender>
         <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
             <appender-ref ref="aliyun_sls"/>
         </root>
     </springProfile>

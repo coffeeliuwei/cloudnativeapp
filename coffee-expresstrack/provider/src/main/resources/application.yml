@@ -67,11 +67,15 @@ dubbo:
     name: coffee-expresstrack
     # WARN 级别：发现不安全的序列化类时打印警告，但不阻止启动（STRICT 会直接拒绝）
     serialize-check-status: WARN
+    # 强制使用接口级注册（Dubbo 2.x 兼容模式），兼容 EDAS 微服务治理页面显示
+    service-discovery:
+      migration: FORCE_INTERFACE
 
   registry:
-    # 服务注册中心地址，nacos:// 协议告诉 Dubbo 使用 Nacos 作为注册中心
-    # 127.0.0.1:8848 是本地 Nacos 地址，生产环境替换为云上 Nacos 地址
-    address: nacos://127.0.0.1:8848
+    # 通过环境变量 DUBBO_REGISTRY 注入注册中心地址：
+    # - 本地开发默认用 127.0.0.1:8848（本地 Nacos）
+    # - EDAS 部署时 Agent 自动拦截并重定向到绑定的 MSE Nacos
+    address: ${DUBBO_REGISTRY:nacos://127.0.0.1:8848}
 
   protocol:
     # 使用 Dubbo 私有二进制协议（比 HTTP 更高效，适合内部服务间调用）

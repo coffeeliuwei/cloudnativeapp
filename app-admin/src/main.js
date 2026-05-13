@@ -11,9 +11,6 @@ import './index.less'
 import '@/assets/icons/iconfont.css'
 import 'view-ui-plus/dist/styles/viewuiplus.css'
 
-// 实际打包时应该不引入mock
-/* eslint-disable */
-if (process.env.NODE_ENV !== 'production') require('@/mock')
 
 const app = createApp(App)
 

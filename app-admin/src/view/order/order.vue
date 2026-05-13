@@ -21,7 +21,7 @@
             <!-- 订单列表分页 -->
             <Row type="flex" justify="end" class="page">
                 <Page :current="searchForm.pageNum" :total="total" :page-size="searchForm.pageSize"
-                page-size-opts="[10,20,50]" size="small" show-total show-elevator show-sizer></Page>
+                :page-size-opts="[10,20,50]" size="small" show-total show-elevator show-sizer></Page>
             </Row>
         </Row>
     </div>

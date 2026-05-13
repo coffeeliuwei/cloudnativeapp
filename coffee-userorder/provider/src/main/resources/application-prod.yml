@@ -1,0 +1,8 @@
+# 生产环境配置（EDAS 部署时加载）
+# Dubbo 注册中心由 EDAS Pandora Agent 自动接管，无需在此配置
+
+database:
+  user: ${DB_USER:userordertest}
+  password: ${DB_PASSWORD:Userordertest123}
+  host: ${DB_HOST:rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com:3306}
+  dbname: ${DB_NAME:userordertest}

@@ -55,16 +55,20 @@ import {
         this.searchForm.pageSize = 10
         this.getOrderList()
       },
-      // 获取旅客列表
       getOrderList () {
         findOrderList(this.searchForm).then(res => {
-          console.log(res)
           this.loading = false
-          if (res.data.success === true) {
-            this.data = res.data.result.list
-            this.total = res.data.result.total
+          const body = res.data
+          if (body && body.success === true) {
+            this.data = body.result.list
+            this.total = body.result.total
           }
+        }).catch(() => {
+          this.loading = false
         })
+      },
+      getTrip (row) {
+        this.chooseItem = row
       }
     }
   }

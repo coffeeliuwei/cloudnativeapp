@@ -52,6 +52,7 @@
             <timeZone>Asia/Shanghai</timeZone>
         </appender>
         <root level="INFO">
+            <appender-ref ref="CONSOLE"/>
             <appender-ref ref="aliyun_sls"/>
         </root>
     </springProfile>
