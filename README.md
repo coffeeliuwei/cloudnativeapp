@@ -15,8 +15,9 @@
 | [架构详解](docs/02-architecture.md) | 从单体到微服务的演进、完整调用链路、分层模型、设计原则 |
 | [各模块代码详解](docs/03-modules.md) | 每个文件的作用、关键代码注释讲解 |
 | [数据库设计](docs/04-database.md) | 表结构、字段说明、ER图、完整初始化 SQL |
-| [阿里云配置指南](docs/01-aliyun-guide.md) | RDS、Nacos、日志服务、制品库的注册与配置教程 |
+| [阿里云配置指南](docs/01-aliyun-guide.md) | RDS、MSE Nacos、日志服务、制品库的注册与配置教程 |
 | [快速启动指南](docs/05-quick-start.md) | 零基础手把手启动教程，含常见错误速查 |
+| [EDAS 部署指南](docs/06-edas-deployment.md) | 将微服务部署到 EDAS ECS 集群，实现 Dubbo 服务治理可视化 |
 
 ---
 
@@ -36,6 +37,7 @@
 | 日志收集 | 阿里云日志服务 SLS | 第7章 |
 | 制品管理 | 阿里云制品库（Maven 私服）| 第8章 |
 | 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第9章 |
+| 云原生部署与服务治理 | 阿里云 EDAS + MSE Nacos | 第10章 |
 
 ---
 
@@ -51,6 +53,8 @@
 ├── MySQL 8.0
 └── Maven（构建）                   阿里云
                                    ├── RDS MySQL（云数据库）
+                                   ├── MSE Nacos（托管注册中心）
+                                   ├── EDAS（应用托管 + 服务治理）
                                    ├── 日志服务 SLS
                                    └── 制品库（Maven 私服）
 ```
@@ -212,9 +216,13 @@ cd app-admin && npm install && npm run dev
 
 | 服务 | 用途 | 配置位置 |
 |------|------|---------|
-| RDS MySQL | 云数据库 | `application-dev.yml` |
+| RDS MySQL | 云数据库 | `application-dev.yml` / `application-prod.yml` |
+| MSE Nacos | 托管注册中心（生产环境）| EDAS 微服务空间绑定，代码无需配置地址 |
+| EDAS | 应用托管、Dubbo 服务治理 | EDAS 控制台，JVM 参数 `-DENV=prod` |
 | 日志服务 SLS | 集中日志收集 | `logback-spring.xml` |
 | 制品库 | Maven 私有仓库 | `pom.xml` 的 `distributionManagement` |
+
+> EDAS 完整部署步骤见 [EDAS 部署指南](docs/06-edas-deployment.md)。
 
 > 详细配置步骤请阅读 [阿里云配置指南](docs/01-aliyun-guide.md)。
 
