@@ -7,6 +7,22 @@
 
 ---
 
+> **当前分支：`dubbo2`（Dubbo 2.7.x 兼容版）**
+>
+> 本分支为 EDAS 内置 Nacos 兼容版，与 `main` 分支（Dubbo 3.x）并存，用于教学对比。两个版本的主要差异：
+>
+> | 项目 | `main` 分支 | `dubbo2` 分支（本分支） |
+> |------|------------|----------------------|
+> | Java 版本 | 17 | **11** |
+> | Spring Boot | 3.3.4 | **2.7.18** |
+> | Dubbo | 3.3.4 | **2.7.23** |
+> | EDAS 注册中心 | MSE Nacos（需单独购买） | **EDAS 内置 Nacos**（无需额外费用） |
+> | EDAS Java 环境 | Java 17 | **Open JDK 11** |
+>
+> 如需切换到 Dubbo 3.x 版本：`git checkout main`
+
+---
+
 ## 文档导航
 
 | 文档 | 内容 |
@@ -37,26 +53,28 @@
 | 日志收集 | 阿里云日志服务 SLS | 第7章 |
 | 制品管理 | 阿里云制品库（Maven 私服）| 第8章 |
 | 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第9章 |
-| 云原生部署与服务治理 | 阿里云 EDAS（内置 Nacos，兼容 Dubbo 2.x）| 第10章 |
+| 云原生部署与服务治理 | 阿里云 EDAS（dubbo2 分支用内置 Nacos；main 分支用 MSE Nacos）| 第10章 |
 
 ---
 
 ## 技术栈
 
 ```
-后端                               前端
-├── Java 11                        ├── Vue.js 3.4
-├── Spring Boot 2.7.18             ├── ViewUI Plus 1.x（UI 组件库）
-├── Apache Dubbo 2.7.23（RPC）      ├── Vuex 4.x（状态管理）
-├── Nacos 1.4.x（注册中心）          ├── Vue Router 4.x（路由）
-├── MyBatis 2.x（ORM）              └── Axios 1.x（HTTP 请求）
+后端（dubbo2 分支）                  前端
+├── Java 11                         ├── Vue.js 3.4
+├── Spring Boot 2.7.18              ├── ViewUI Plus 1.x（UI 组件库）
+├── Apache Dubbo 2.7.23（RPC）       ├── Vuex 4.x（状态管理）
+├── Nacos 1.4.x（注册中心）           ├── Vue Router 4.x（路由）
+├── MyBatis 2.x（ORM）               └── Axios 1.x（HTTP 请求）
 ├── MySQL 8.0
-└── Maven（构建）                   阿里云
-                                   ├── RDS MySQL（云数据库）
-                                   ├── EDAS（应用托管 + 服务治理）
-                                   │   └── 内置 Nacos（兼容 Dubbo 2.x）
-                                   ├── 日志服务 SLS
-                                   └── 制品库（Maven 私服）
+└── Maven（构建）                    阿里云
+                                    ├── RDS MySQL（云数据库）
+                                    ├── EDAS（应用托管 + 服务治理）
+                                    │   └── 内置 Nacos（兼容 Dubbo 2.x）
+                                    ├── 日志服务 SLS
+                                    └── 制品库（Maven 私服）
+
+# main 分支使用：Java 17 / Spring Boot 3.3.4 / Dubbo 3.3.4 / MSE Nacos
 ```
 
 ---
@@ -146,13 +164,13 @@ cloudnativeapp/
 
 ### 1. 环境要求
 
-| 工具 | 版本 | 必须 |
-|------|------|------|
-| JDK | 11 | ✅ |
-| Maven | 3.8+ | ✅ |
-| Node.js | 16+ | ✅ |
-| Nacos | 1.4.x / 2.x | ✅ |
-| MySQL | 8.0 或阿里云RDS | ✅ |
+| 工具 | main 分支 | dubbo2 分支（本分支） | 必须 |
+|------|-----------|---------------------|------|
+| JDK | 17 | **11** | ✅ |
+| Maven | 3.8+ | 3.8+ | ✅ |
+| Node.js | 16+ | 16+ | ✅ |
+| Nacos | 2.x | 1.4.x / 2.x | ✅ |
+| MySQL | 8.0 或阿里云RDS | 8.0 或阿里云RDS | ✅ |
 
 ### 2. 启动顺序（必须按序）
 
