@@ -4,11 +4,11 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <!-- Spring Boot 3.3.x 作为父 POM，统一管理所有依赖版本 -->
+    <!-- Spring Boot 2.7.x 作为父 POM，与 Dubbo 2.7.x 配套 -->
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.3.4</version>
+        <version>2.7.18</version>
         <relativePath/>
     </parent>
 
@@ -18,7 +18,7 @@
 
     <properties>
         <java.version>17</java.version>
-        <dubbo.version>3.3.4</dubbo.version>
+        <dubbo.version>2.7.23</dubbo.version>
     </properties>
 
     <dependencies>
@@ -41,11 +41,11 @@
             <artifactId>spring-boot-starter-jdbc</artifactId>
         </dependency>
 
-        <!-- MyBatis Spring Boot Starter（3.x 支持 Spring Boot 3.x） -->
+        <!-- MyBatis Spring Boot Starter（2.x 适配 Spring Boot 2.7.x） -->
         <dependency>
             <groupId>org.mybatis.spring.boot</groupId>
             <artifactId>mybatis-spring-boot-starter</artifactId>
-            <version>3.0.3</version>
+            <version>2.3.2</version>
         </dependency>
 
         <!-- Spring Boot Actuator（健康检查端点，EDAS 通过 /actuator/health 检测存活） -->
@@ -54,13 +54,14 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
-        <!-- MySQL 8.x JDBC 驱动（spring-boot-starter-jdbc 只含连接池，驱动需单独引入） -->
+        <!-- MySQL 8.x JDBC 驱动（Spring Boot 2.x 使用旧 groupId） -->
         <dependency>
-            <groupId>com.mysql</groupId>
-            <artifactId>mysql-connector-j</artifactId>
+            <groupId>mysql</groupId>
+            <artifactId>mysql-connector-java</artifactId>
+            <version>8.0.33</version>
         </dependency>
 
-        <!-- Dubbo Spring Boot Starter（3.x 支持 Spring Boot 3.x + Java 17） -->
+        <!-- Dubbo Spring Boot Starter（2.7.x 适配 Spring Boot 2.x） -->
         <dependency>
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo-spring-boot-starter</artifactId>
@@ -74,21 +75,11 @@
             <version>${dubbo.version}</version>
         </dependency>
 
-        <!--
-            Dubbo 3.3.x 初始化服务反射时依赖 protobuf-java，但 dubbo-common 将其声明为
-            optional（不传递给下游），必须显式引入，否则启动时抛 NoClassDefFoundError
-        -->
-        <dependency>
-            <groupId>com.google.protobuf</groupId>
-            <artifactId>protobuf-java</artifactId>
-            <version>3.25.3</version>
-        </dependency>
-
-        <!-- Nacos 客户端 2.x（兼容 Nacos 2.x 服务端） -->
+        <!-- Nacos 客户端 1.x（与 Dubbo 2.7.x 配套） -->
         <dependency>
             <groupId>com.alibaba.nacos</groupId>
             <artifactId>nacos-client</artifactId>
-            <version>2.5.0</version>
+            <version>1.4.7</version>
         </dependency>
 
         <!-- Spring Boot Test -->
@@ -98,7 +89,7 @@
             <scope>test</scope>
         </dependency>
 
-        <!-- Lombok：编译时生成 @Slf4j log 对象等，运行时不需要（spring-boot-maven-plugin 已配置排除） -->
+        <!-- Lombok -->
         <dependency>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok</artifactId>
@@ -120,7 +111,6 @@
                 <groupId>org.springframework.boot</groupId>
                 <artifactId>spring-boot-maven-plugin</artifactId>
                 <configuration>
-                    <!-- 排除 Lombok（编译时工具，运行时不需要） -->
                     <excludes>
                         <exclude>
                             <groupId>org.projectlombok</groupId>
