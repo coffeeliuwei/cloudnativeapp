@@ -9,14 +9,14 @@
 在开始之前，请确认以下工具已安装并可用（在命令提示符/终端输入命令验证）：
 
 ```bash
-java -version    # 应显示 17.x.x
+java -version    # 应显示 11.x.x
 mvn -version     # 应显示 Apache Maven 3.8.x 或更高
 node -v          # 应显示 v16.x 或更高
 ```
 
 如果有任何一项没有输出，请先参考 [环境搭建指南](../README.md) 完成安装。
 
-> **Java 版本注意**：本项目要求 Java 17+。如果你的系统安装了多个 Java 版本，请确认 `JAVA_HOME` 环境变量指向 Java 17 的安装目录。
+> **Java 版本注意**：本分支（dubbo2）使用 Dubbo 2.7.x，要求 **Java 11**。如果你的系统安装了多个 Java 版本，请确认 `JAVA_HOME` 环境变量指向 Java 11 的安装目录。Java 17 在 EDAS 部署时会因模块封装限制导致 Javassist 无法加载，本地开发也建议统一使用 Java 11。
 
 ---
 
@@ -28,10 +28,10 @@ node -v          # 应显示 v16.x 或更高
 
 `File` → `Project Structure`（快捷键 `Ctrl+Alt+Shift+S`）→ `SDKs`
 
-- 如果列表里有 Java 17，选中它
-- 如果没有，点击 `+` → `Add JDK` → 选择 JDK 17 的安装目录
+- 如果列表里有 Java 11，选中它
+- 如果没有，点击 `+` → `Add JDK` → 选择 JDK 11 的安装目录
 
-然后在 `Project` 选项卡中，将 `SDK` 和 `Language level` 都设为 **17**。
+然后在 `Project` 选项卡中，将 `SDK` 和 `Language level` 都设为 **11**。
 
 ### 确认 Maven 设置
 
@@ -147,9 +147,9 @@ mvn clean install -DskipTests
 ```
 
 **如果看到 BUILD FAILURE：**
-- 检查 Java 版本是否是 17+（`java -version`）
+- 检查 Java 版本是否是 11（`java -version`）
 - 查看错误信息中 `ERROR` 行定位具体原因
-- 最常见原因：`JAVA_HOME` 指向的不是 Java 17
+- 最常见原因：`JAVA_HOME` 指向的不是 Java 11
 
 ---
 
@@ -356,12 +356,13 @@ kill -9 <PID>
 
 ### 错误0：`UnsupportedClassVersionError` 或 `class file has wrong version`
 
-**含义**：Java 版本不够，需要 Java 17+。
+**含义**：class 文件版本不匹配。本分支所有模块编译目标为 Java 11（class version 55），运行时必须使用 Java 11。
 
 **解决方法：**
-1. 下载安装 JDK 17（推荐：[Adoptium Temurin 17](https://adoptium.net)）
-2. 设置 `JAVA_HOME` 环境变量指向 JDK 17 目录
-3. 重启 IDEA，在 `File` → `Project Structure` → `SDK` 中选择 Java 17
+1. 下载安装 JDK 11（推荐：[Adoptium Temurin 11](https://adoptium.net)）
+2. 设置 `JAVA_HOME` 环境变量指向 JDK 11 目录
+3. 重启 IDEA，在 `File` → `Project Structure` → `SDK` 中选择 Java 11
+4. EDAS 部署时在"Java 环境"下拉框选择 **Open JDK 11**
 
 ---
 

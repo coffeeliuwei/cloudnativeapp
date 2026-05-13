@@ -31,13 +31,13 @@
 |--------|---------|---------|
 | 微服务拆分思想 | 订单服务 / 快递服务 独立部署 | 第2章 |
 | 服务注册与发现 | Alibaba Nacos | 第3章 |
-| 服务间远程调用（RPC）| Apache Dubbo | 第4章 |
+| 服务间远程调用（RPC）| Apache Dubbo 2.7.x | 第4章 |
 | 持久层框架 | MyBatis + MySQL | 第5章 |
 | 云数据库 | 阿里云 RDS MySQL | 第6章 |
 | 日志收集 | 阿里云日志服务 SLS | 第7章 |
 | 制品管理 | 阿里云制品库（Maven 私服）| 第8章 |
 | 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第9章 |
-| 云原生部署与服务治理 | 阿里云 EDAS + MSE Nacos | 第10章 |
+| 云原生部署与服务治理 | 阿里云 EDAS（内置 Nacos，兼容 Dubbo 2.x）| 第10章 |
 
 ---
 
@@ -45,16 +45,16 @@
 
 ```
 后端                               前端
-├── Java 17                        ├── Vue.js 3.4
-├── Spring Boot 3.3.4              ├── ViewUI Plus 1.x（UI 组件库）
-├── Apache Dubbo 3.3.4（RPC）       ├── Vuex 4.x（状态管理）
-├── Nacos 2.x（注册中心）            ├── Vue Router 4.x（路由）
-├── MyBatis 3.x（ORM）              └── Axios 1.x（HTTP 请求）
+├── Java 11                        ├── Vue.js 3.4
+├── Spring Boot 2.7.18             ├── ViewUI Plus 1.x（UI 组件库）
+├── Apache Dubbo 2.7.23（RPC）      ├── Vuex 4.x（状态管理）
+├── Nacos 1.4.x（注册中心）          ├── Vue Router 4.x（路由）
+├── MyBatis 2.x（ORM）              └── Axios 1.x（HTTP 请求）
 ├── MySQL 8.0
 └── Maven（构建）                   阿里云
                                    ├── RDS MySQL（云数据库）
-                                   ├── MSE Nacos（托管注册中心）
                                    ├── EDAS（应用托管 + 服务治理）
+                                   │   └── 内置 Nacos（兼容 Dubbo 2.x）
                                    ├── 日志服务 SLS
                                    └── 制品库（Maven 私服）
 ```
@@ -148,10 +148,10 @@ cloudnativeapp/
 
 | 工具 | 版本 | 必须 |
 |------|------|------|
-| JDK | 17+ | ✅ |
+| JDK | 11 | ✅ |
 | Maven | 3.8+ | ✅ |
 | Node.js | 16+ | ✅ |
-| Nacos | 2.x | ✅ |
+| Nacos | 1.4.x / 2.x | ✅ |
 | MySQL | 8.0 或阿里云RDS | ✅ |
 
 ### 2. 启动顺序（必须按序）
