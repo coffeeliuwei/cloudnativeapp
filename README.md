@@ -2,7 +2,7 @@
 
 **课程**：云原生应用框架与开发 ｜ **讲师**：coffeeliu ｜ **邮箱**：coffee.liu@gmail.com
 
-> 本项目是课程的完整配套代码，演示基于 **Spring Boot + Apache Dubbo + Nacos + Redis + RocketMQ + MySQL + Vue.js** 的云原生微服务电商系统。
+> 本项目是课程的完整配套代码，演示基于 **Spring Boot + Apache Dubbo + Nacos + MySQL + Vue.js** 的云原生微服务电商系统。
 > 即使你从未接触过微服务，跟着文档也能一步步把项目跑起来。
 
 ---
@@ -34,13 +34,11 @@
 | 服务间远程调用（RPC）| Apache Dubbo | 第4章 |
 | 持久层框架 | MyBatis + MySQL | 第5章 |
 | 云数据库 | 阿里云 RDS MySQL | 第6章 |
-| **高速缓存** | **Redis / 阿里云 Tair** | **第7章** |
-| **消息队列** | **RocketMQ / 阿里云 MQ** | **第8章** |
-| **动态配置中心** | **Nacos Config** | **第9章** |
-| 日志收集 | 阿里云日志服务 SLS | 第10章 |
-| 制品管理 | 阿里云制品库（Maven 私服）| 第11章 |
-| 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第12章 |
-| 云原生部署与服务治理 | 阿里云 EDAS + MSE Nacos | 第13章 |
+| **动态配置中心** | **Nacos Config** | **第7章** |
+| 日志收集 | 阿里云日志服务 SLS | 第8章 |
+| 制品管理 | 阿里云制品库（Maven 私服）| 第9章 |
+| 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第10章 |
+| 云原生部署与服务治理 | 阿里云 EDAS + MSE Nacos | 第11章 |
 
 ---
 
@@ -52,12 +50,10 @@
 ├── Spring Boot 3.3.4              ├── ViewUI Plus 1.x（UI 组件库）
 ├── Apache Dubbo 3.3.4（RPC）       ├── Vuex 4.x（状态管理）
 ├── Nacos 2.x（注册中心 + 配置中心）  ├── Vue Router 4.x（路由）
-├── Redis（高速缓存）                └── Axios 1.x（HTTP 请求）
-├── RocketMQ（消息队列）
-├── MyBatis 3.x（ORM）              阿里云
-├── MySQL 8.0                      ├── RDS MySQL（云数据库）
-└── Maven（构建）                   ├── Tair / Redis（云缓存）
-                                   ├── RocketMQ（云消息队列）
+├── MyBatis 3.x（ORM）              └── Axios 1.x（HTTP 请求）
+├── MySQL 8.0
+└── Maven（构建）                   阿里云
+                                   ├── RDS MySQL（云数据库）
                                    ├── MSE Nacos（托管注册中心 + 配置中心）
                                    ├── EDAS（应用托管 + 服务治理）
                                    ├── 日志服务 SLS
@@ -80,20 +76,15 @@ coffee-app（API网关 :8005）          ← 统一对外入口
   ▼                        ▼
 coffee-userorder        coffee-expresstrack
   (:7001)                  (:8001, Dubbo :28888)
-  │ JDBC    │ 发布消息       │ JDBC    ↑ 消费消息
-  ▼         ▼               ▼         │
-RDS MySQL  RocketMQ ──────────────────┘
-(userorder) (:9876)      RDS MySQL
-                        (expresstracktest)
-  │ Cache                  │ Cache
+  │ JDBC                   │ JDBC
   ▼                        ▼
-Redis :6379             Redis :6379
-（订单详情缓存）          （快递轨迹缓存）
-  │                        │
-  └──────────┬─────────────┘
-             ▼
-        Nacos :8848
-   （服务注册 + 动态配置中心）
+RDS MySQL               RDS MySQL
+(userordertest)         (expresstracktest)
+        │              │
+        └──────┬───────┘
+               ▼
+          Nacos :8848
+    （服务注册 + 动态配置中心）
 ```
 
 > 详细架构说明请阅读 [架构详解](docs/02-architecture.md)。
@@ -162,8 +153,6 @@ cloudnativeapp/
 | Maven | 3.8+ | ✅ |
 | Node.js | 16+ | ✅ |
 | Nacos | 2.x | ✅ |
-| Redis | 6.x+ | ✅ |
-| RocketMQ | 5.x | ✅ |
 | MySQL | 8.0 或阿里云RDS | ✅ |
 
 ### 2. 启动顺序（必须按序）
@@ -172,44 +161,35 @@ cloudnativeapp/
 # 第1步：启动 Nacos（服务注册中心 + 配置中心）
 cd nacos/bin && startup.cmd -m standalone
 
-# 第2步：启动 Redis（高速缓存）
-redis-server
-
-# 第3步：启动 RocketMQ Name Server
-cd rocketmq/bin && mqnamesrv.cmd
-
-# 第4步：启动 RocketMQ Broker
-cd rocketmq/bin && mqbroker.cmd -n localhost:9876
-
-# 第5步：安装本地依赖（首次使用）
+# 第2步：安装本地依赖（首次使用）
 cd coffee-common           && mvn clean install -DskipTests
 cd coffee-userorder/api    && mvn clean install -DskipTests
 cd coffee-expresstrack/api && mvn clean install -DskipTests
 
-# 第6步：启动订单微服务
+# 第3步：启动订单微服务
 cd coffee-userorder/provider && mvn spring-boot:run
 
-# 第7步：启动快递微服务
+# 第4步：启动快递微服务
 cd coffee-expresstrack/provider && mvn spring-boot:run
 
-# 第8步：启动主应用网关
+# 第5步：启动主应用网关
 cd coffee-app && mvn spring-boot:run
 
-# 第9步：启动前端
+# 第6步：启动前端
 cd app-admin && npm install && npm run dev
 ```
 
 ### 3. 验证
 
 ```bash
-# 查询快递轨迹（Redis 缓存演示）
+# 查询快递轨迹
 GET http://localhost:8005/hello/ORDER001
-# 第一次查询走数据库，第二次直接命中 Redis 缓存
 
-# 创建订单（RocketMQ 演示）
+# 创建订单（同步创建快递单）
 POST http://localhost:8005/createOrder
 Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
-# 订单写入 MySQL 后，RocketMQ 自动触发 coffee-expresstrack 创建快递单
+# 订单写入 MySQL 后，Dubbo RPC 同步调用 coffee-expresstrack 创建快递单
+# 立即用 GET /hello/ORDER100 即可查到"商家已揽件"轨迹
 ```
 
 > 详细步骤和截图说明请阅读 [快速启动指南](docs/05-quick-start.md)。
@@ -221,9 +201,6 @@ Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
 | 服务 | 端口 | 说明 |
 |------|------|------|
 | Nacos | 8848 | 服务注册中心 + 动态配置中心 |
-| Redis | 6379 | 高速缓存 |
-| RocketMQ Name Server | 9876 | 消息队列注册中心 |
-| RocketMQ Broker | 10911 | 消息队列代理 |
 | coffee-userorder | 7001 | 订单微服务 |
 | coffee-expresstrack | 8001 | 快递微服务 HTTP |
 | coffee-expresstrack | 28888 | 快递微服务 Dubbo RPC |
@@ -236,9 +213,9 @@ Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
 
 | 接口 | 方法 | 路径 | 参数 | 说明 |
 |------|------|------|------|------|
-| 查询快递轨迹 | GET | `/hello/{orderid}` | 路径参数：订单ID | 返回该订单的快递轨迹列表（Redis 缓存加速）|
-| 查询订单 | POST | `/findOrderList` | Body: `{"order_id":"xxx"}` | 返回订单及快递信息（Redis 缓存加速）|
-| **创建订单** | **POST** | **`/createOrder`** | Body: `{"order_id":"xxx","OneID":"yyy","order_amount":99.0}` | **写入订单并触发 RocketMQ 消息，异步创建快递单** |
+| 查询快递轨迹 | GET | `/hello/{orderid}` | 路径参数：订单ID | 返回该订单的快递轨迹列表 |
+| 查询订单 | POST | `/findOrderList` | Body: `{"order_id":"xxx"}` | 返回订单及快递信息 |
+| **创建订单** | **POST** | **`/createOrder`** | Body: `{"order_id":"xxx","OneID":"yyy","order_amount":99.0}` | **写入订单，Dubbo RPC 同步创建快递单** |
 
 ---
 
@@ -249,9 +226,7 @@ Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
 | 服务 | 用途 | 配置位置 |
 |------|------|---------|
 | RDS MySQL | 云数据库 | `application-dev.yml` / `application-prod.yml` |
-| **Tair（云 Redis）** | **高速缓存，替代本地 Redis** | **`REDIS_HOST` / `REDIS_PORT` / `REDIS_PASSWORD` 环境变量** |
-| **云消息队列 RocketMQ** | **消息队列，替代本地 RocketMQ** | **`ROCKETMQ_NAMESERVER` 环境变量** |
-| MSE Nacos | 托管注册中心 + 配置中心（生产环境）| EDAS 微服务空间绑定；Nacos Config Data ID 见各服务说明 |
+| MSE Nacos | 托管注册中心 + 配置中心（生产环境）| EDAS 微服务空间绑定 |
 | EDAS | 应用托管、Dubbo 服务治理 | EDAS 控制台，JVM 参数 `-DENV=prod` |
 | 日志服务 SLS | 集中日志收集 | `logback-spring.xml` |
 | 制品库 | Maven 私有仓库 | `pom.xml` 的 `distributionManagement` |
@@ -271,19 +246,13 @@ Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
 > 订单服务或快递服务还没启动，或没有注册到 Nacos。检查服务列表：[http://localhost:8848/nacos](http://localhost:8848/nacos)
 
 **Q：`BUILD FAILURE` / 找不到依赖包？**
-> 未执行本地安装步骤。按顺序运行 `mvn clean install` 命令（见快速开始第5步）。
+> 未执行本地安装步骤。按顺序运行 `mvn clean install` 命令（见快速开始第2步）。
 
 **Q：数据库连接失败？**
 > 检查 `application-dev.yml` 中的数据库地址和账号密码。阿里云 RDS 还需在白名单中添加本机IP。
 
-**Q：Redis 连接失败（`Unable to connect to Redis`）？**
-> Redis 未启动。执行 `redis-server` 启动本地 Redis，或检查 `REDIS_HOST` 环境变量配置。
-
-**Q：RocketMQ 报 `No name server address`？**
-> RocketMQ Name Server 未启动。执行 `mqnamesrv.cmd`，再启动 Broker（`mqbroker.cmd -n localhost:9876`）。
-
 **Q：`createOrder` 接口成功但查不到快递轨迹？**
-> RocketMQ 消息消费有短暂延迟（通常 1 秒内）。稍等片刻再用 `/hello/{order_id}` 查询，或检查 coffee-expresstrack 的日志确认消费成功。
+> createOrder 通过 Dubbo RPC 同步创建快递单，调用成功后立即可查。若查不到，请检查 coffee-expresstrack 的日志是否有"快递单已创建"的输出，确认该服务正常运行。
 
 > 更多问题解答请查阅 [快速启动指南](docs/05-quick-start.md#常见错误速查)。
 
