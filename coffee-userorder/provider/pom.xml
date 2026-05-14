@@ -20,7 +20,6 @@
         <java.version>17</java.version>
         <dubbo.version>3.3.4</dubbo.version>
         <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
-        <rocketmq-starter.version>2.3.0</rocketmq-starter.version>
     </properties>
 
     <!-- Spring Cloud Alibaba BOM：统一管理 Nacos Config 等 SCA 组件版本 -->
@@ -104,19 +103,6 @@
             <groupId>com.alibaba.nacos</groupId>
             <artifactId>nacos-client</artifactId>
             <version>2.5.0</version>
-        </dependency>
-
-        <!-- Redis：高速缓存，缓存热点订单数据，减少数据库压力 -->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-
-        <!-- RocketMQ：消息队列，下单后异步通知快递服务创建快递单 -->
-        <dependency>
-            <groupId>org.apache.rocketmq</groupId>
-            <artifactId>rocketmq-spring-boot-starter</artifactId>
-            <version>${rocketmq-starter.version}</version>
         </dependency>
 
         <!-- Nacos Config：动态配置中心，支持不重启服务热更新配置项 -->
