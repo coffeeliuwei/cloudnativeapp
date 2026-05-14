@@ -96,10 +96,13 @@ public class CoffeeController {
     }
 
     /**
-     * 创建订单（演示 RocketMQ 异步解耦）
+     * 创建订单（同步 Dubbo RPC 调用两个微服务）
      *
-     * 当 feature.mq.enabled=true 时，coffee-userorder 写入订单后会向 RocketMQ 发布
-     * "order-created" 消息，coffee-expresstrack 消费消息后异步创建快递单和初始轨迹。
+     * 调用流程：
+     *   1. Dubbo RPC 调用 coffee-userorder，将订单写入 order 表，返回 orderId
+     *   2. Dubbo RPC 调用 coffee-expresstrack，同步创建快递单和初始轨迹（"商家已揽件"）
+     *
+     * 两步 RPC 均为同步调用，调用方等待两步都完成后才返回响应。
      *
      * 示例请求：POST http://localhost:8005/createOrder
      * 请求体：{ "order_id": "ORDER099", "OneID": "ONE001", "order_amount": 99.9 }
@@ -109,7 +112,13 @@ public class CoffeeController {
      */
     @PostMapping("createOrder")
     public Result<String> createOrder(@RequestBody UserOrderCreateDTO userOrderCreateDTO) {
+        // 第一步：Dubbo RPC 调用 coffee-userorder，将订单写入 order 表
         String orderId = userOrderInfoService.createOrder(userOrderCreateDTO);
+
+        // 第二步：Dubbo RPC 调用 coffee-expresstrack，同步创建快递单和初始轨迹
+        // createExpress 内部完成两步写库：INSERT express + INSERT track（"商家已揽件"）
+        expressTrackInfoService.createExpress(orderId);
+
         return new ResultUtil<String>().setData(orderId);
     }
 }

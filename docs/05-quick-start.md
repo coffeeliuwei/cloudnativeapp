@@ -2,8 +2,6 @@
 
 > 本文档是给**完全没有基础**的同学准备的手把手启动教程。按步骤操作，30 分钟内能把项目跑起来。每一步都有验证方法，确认成功再进行下一步。
 
-> **dubbo2 分支提示**：本分支使用 **Java 11**，不是 Java 17。以下文档中所有出现 "Java 17" 的地方，在 dubbo2 分支中均替换为 **Java 11**。
-
 ---
 
 ## 前置准备清单
@@ -11,18 +9,14 @@
 在开始之前，请确认以下工具已安装并可用（在命令提示符/终端输入命令验证）：
 
 ```bash
-java -version    # main 分支应显示 17.x.x；dubbo2 分支应显示 11.x.x
+java -version    # 应显示 17.x.x
 mvn -version     # 应显示 Apache Maven 3.8.x 或更高
 node -v          # 应显示 v16.x 或更高
 ```
 
 如果有任何一项没有输出，请先参考 [环境搭建指南](../README.md) 完成安装。
 
-> **Java 版本注意**：
-> - `main` 分支（Dubbo 3.x）：需要 **Java 17**
-> - `dubbo2` 分支（Dubbo 2.7.x，本分支）：需要 **Java 11**
->
-> 请确认 `JAVA_HOME` 环境变量指向对应版本的 JDK 目录。
+> **Java 版本注意**：本项目要求 Java 17+。如果你的系统安装了多个 Java 版本，请确认 `JAVA_HOME` 环境变量指向 Java 17 的安装目录。
 
 ---
 
@@ -34,10 +28,10 @@ node -v          # 应显示 v16.x 或更高
 
 `File` → `Project Structure`（快捷键 `Ctrl+Alt+Shift+S`）→ `SDKs`
 
-- `main` 分支：选择 Java 17；`dubbo2` 分支（本分支）：选择 **Java 11**
-- 如果没有，点击 `+` → `Add JDK` → 选择对应版本的 JDK 目录
+- 如果列表里有 Java 17，选中它
+- 如果没有，点击 `+` → `Add JDK` → 选择 JDK 17 的安装目录
 
-然后在 `Project` 选项卡中，将 `SDK` 和 `Language level` 设为对应版本（main: **17**，dubbo2: **11**）。
+然后在 `Project` 选项卡中，将 `SDK` 和 `Language level` 都设为 **17**。
 
 ### 确认 Maven 设置
 
@@ -93,66 +87,14 @@ Nacos started successfully in stand alone mode. use embedded storage
 | 菜单位置 | 用途 | 本项目如何使用 |
 |---------|------|-------------|
 | 服务管理 → 服务列表 | 查看所有已注册的微服务及健康状态 | 启动微服务后在此验证注册情况 |
-| 配置管理 → 配置列表 | 集中管理配置文件（动态推送） | 本项目使用本地配置文件，暂不用此功能 |
+| 配置管理 → 配置列表 | 集中管理配置文件（动态推送） | 存放动态配置项（支持热更新） |
 | 命名空间 | 隔离不同环境（dev/test/prod） | 本项目使用默认命名空间 |
 
 > **保持这个命令窗口开着！** 关闭它会停止 Nacos，所有微服务将丢失注册信息，Dubbo 调用会立即失败并报 `No provider available`。
 
 ---
 
-## Step 2：启动 Redis（可选 — 演示缓存时需要）
-
-> **默认可跳过**：配置文件中 `feature.cache.enabled=false`，Redis 未启动时项目仍能正常运行，所有查询直接走数据库。
-> 需要演示 Redis Cache-Aside 缓存效果时，才需要先启动 Redis 再将开关改为 `true`。
-
-**方式一：Docker 启动（推荐）**
-
-```bash
-docker run -d --name redis -p 6379:6379 redis:7-alpine
-```
-
-**方式二：本地安装版**
-
-```bash
-# 进入 Redis 安装目录
-cd D:\tools\Redis
-redis-server.exe redis.windows.conf
-```
-
-**验证：**
-
-```bash
-redis-cli ping    # 返回 PONG 即成功
-```
-
----
-
-## Step 3：启动 RocketMQ（可选 — 演示消息队列时需要）
-
-> **默认可跳过**：配置文件中 `feature.mq.enabled=false`，RocketMQ 未启动时项目仍能正常运行，createOrder 只写数据库不发消息。
-> 需要演示订单创建异步触发快递单时，才需要先启动 RocketMQ 再将开关改为 `true`。
-
-```bash
-# 进入 RocketMQ 的 bin 目录
-cd D:\tools\rocketmq\bin
-
-# 启动 NameServer
-start mqnamesrv.cmd
-
-# 等待 NameServer 启动（约5秒），再启动 Broker
-start mqbroker.cmd -n localhost:9876 autoCreateTopicEnable=true
-```
-
-**验证：** 两个命令窗口均无报错，且以下命令有输出：
-
-```bash
-# Windows
-mqadmin.cmd clusterList -n localhost:9876
-```
-
----
-
-## Step 4：确认数据库可用
+## Step 2：确认数据库可用
 
 执行 [数据库初始化 SQL](./04-database.md#4-完整初始化-sql)，确保两个数据库都已创建并有测试数据。
 
@@ -170,7 +112,7 @@ SELECT * FROM track;     -- 应该看到 8 条轨迹数据
 
 ---
 
-## Step 5：安装本地 Maven 依赖
+## Step 3：安装本地 Maven 依赖
 
 由于三个 Java 项目之间存在依赖，需要先把公共包安装到本地 Maven 仓库（`~/.m2/repository`）。
 
@@ -205,13 +147,13 @@ mvn clean install -DskipTests
 ```
 
 **如果看到 BUILD FAILURE：**
-- 检查 Java 版本（`java -version`）：main 分支需要 17，dubbo2 分支需要 11
+- 检查 Java 版本是否是 17+（`java -version`）
 - 查看错误信息中 `ERROR` 行定位具体原因
-- 最常见原因：`JAVA_HOME` 指向的版本不对
+- 最常见原因：`JAVA_HOME` 指向的不是 Java 17
 
 ---
 
-## Step 6：配置数据库连接
+## Step 4：配置数据库连接
 
 每个微服务的 `application-dev.yml` 中需要填写实际的数据库连接信息。
 
@@ -249,7 +191,7 @@ nacos:
 
 ---
 
-## Step 7：启动订单微服务
+## Step 5：启动订单微服务
 
 **方法 A：在 IDEA 中启动（推荐）**
 
@@ -281,7 +223,7 @@ Started UserOrderApplication in x.xxx seconds (JVM running for x.xxx)
 
 ---
 
-## Step 8：启动快递微服务
+## Step 6：启动快递微服务
 
 同样的方式启动 `coffee-expresstrack/provider` 下的 `ExpressTrackApplication.java`。
 
@@ -295,7 +237,7 @@ Started ExpressTrackApplication in x.xxx seconds
 
 ---
 
-## Step 9：启动主应用网关
+## Step 7：启动主应用网关
 
 启动 `coffee-app` 下的 `CoffeeAppApplication.java`。
 
@@ -309,7 +251,7 @@ Started CoffeeAppApplication in x.xxx seconds (JVM running for x.xxx)
 
 ---
 
-## Step 10：测试后端接口
+## Step 8：测试后端接口
 
 打开浏览器，访问：
 
@@ -343,9 +285,28 @@ http://localhost:8005/hello/ORDER001
 
 看到这个 JSON，后端已经完全跑起来了。
 
+**验证创建订单接口：**
+
+```bash
+# 使用 curl 或 Postman 调用创建订单接口
+curl -X POST http://localhost:8005/createOrder \
+  -H "Content-Type: application/json" \
+  -d '{"order_id":"ORDER100","OneID":"U001","order_amount":199.0}'
+```
+
+**期望结果：**
+```json
+{"success":true,"code":200,"result":"ORDER100"}
+```
+
+随后查询轨迹：
+```
+GET http://localhost:8005/hello/ORDER100
+```
+
 ---
 
-## Step 11：启动前端
+## Step 9：启动前端
 
 ```bash
 # 进入前端目录
@@ -414,17 +375,12 @@ kill -9 <PID>
 
 ### 错误0：`UnsupportedClassVersionError` 或 `class file has wrong version`
 
-**含义**：class 文件版本与运行时 JDK 版本不匹配。
+**含义**：Java 版本不够，需要 Java 17+。
 
-**解决方法（根据所在分支）：**
-- `main` 分支：需要 JDK 17+，下载 [Adoptium Temurin 17](https://adoptium.net)
-- `dubbo2` 分支（本分支）：需要 JDK 11，下载 [Adoptium Temurin 11](https://adoptium.net)
-
-操作步骤：
-1. 安装对应版本 JDK
-2. 设置 `JAVA_HOME` 环境变量指向该 JDK 目录
-3. 重启 IDEA，在 `File` → `Project Structure` → `SDK` 中选择对应版本
-4. EDAS 部署时在"Java 环境"下拉框选择对应版本（dubbo2 分支选 **Open JDK 11**）
+**解决方法：**
+1. 下载安装 JDK 17（推荐：[Adoptium Temurin 17](https://adoptium.net)）
+2. 设置 `JAVA_HOME` 环境变量指向 JDK 17 目录
+3. 重启 IDEA，在 `File` → `Project Structure` → `SDK` 中选择 Java 17
 
 ---
 

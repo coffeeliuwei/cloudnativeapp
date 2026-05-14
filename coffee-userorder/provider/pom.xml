@@ -21,7 +21,6 @@
         <dubbo.version>2.7.23</dubbo.version>
         <spring-cloud-alibaba.version>2021.0.5.0</spring-cloud-alibaba.version>
         <spring-cloud.version>2021.0.5</spring-cloud.version>
-        <rocketmq-starter.version>2.2.3</rocketmq-starter.version>
     </properties>
 
     <dependencyManagement>
@@ -103,19 +102,6 @@
             <groupId>org.apache.dubbo</groupId>
             <artifactId>dubbo-registry-nacos</artifactId>
             <version>${dubbo.version}</version>
-        </dependency>
-
-        <!-- Redis 缓存（Spring Boot 2.7.x 内置版本管理）-->
-        <dependency>
-            <groupId>org.springframework.boot</groupId>
-            <artifactId>spring-boot-starter-data-redis</artifactId>
-        </dependency>
-
-        <!-- RocketMQ 消息队列（2.2.3 适配 Spring Boot 2.x）-->
-        <dependency>
-            <groupId>org.apache.rocketmq</groupId>
-            <artifactId>rocketmq-spring-boot-starter</artifactId>
-            <version>${rocketmq-starter.version}</version>
         </dependency>
 
         <!-- Nacos Config 动态配置（通过 SCA BOM 管理版本）-->

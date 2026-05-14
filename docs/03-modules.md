@@ -455,17 +455,40 @@ public class CoffeeController {
         // ResultUtil 将数据包装进统一响应体 Result<T>
         return new ResultUtil<PageDTO<ExpressTrackInfoResultDTO>>().setData(trackPage);
     }
+
+    /**
+     * 接口3：POST /createOrder
+     * 创建订单并同步创建快递单（Dubbo RPC 同步编排）
+     *
+     * 两个 Dubbo RPC 调用串行执行，由 coffee-app 统一编排：
+     *   ① userOrderInfoService.createOrder()   → order 表写入订单
+     *   ② expressTrackInfoService.createExpress() → express 表写快递单 + track 表写"商家已揽件"
+     *
+     * 调用后立即 GET /hello/{order_id} 即可查到轨迹记录。
+     */
+    @PostMapping("createOrder")
+    public Result<String> createOrder(@RequestBody UserOrderCreateDTO userOrderCreateDTO) {
+        // 第一步：Dubbo RPC 调用 coffee-userorder，将订单写入 order 表
+        String orderId = userOrderInfoService.createOrder(userOrderCreateDTO);
+
+        // 第二步：Dubbo RPC 调用 coffee-expresstrack，同步创建快递单和初始轨迹
+        // createExpress 内部完成两步写库：INSERT express + INSERT track（"商家已揽件"）
+        expressTrackInfoService.createExpress(orderId);
+
+        return new ResultUtil<String>().setData(orderId);
+    }
 }
 ```
 
-**两个接口的对比：**
+**三个接口的对比：**
 
-| | `/hello/{orderid}` | `/findOrderList` |
-|---|---|---|
-| HTTP 方法 | GET（`@GetMapping`） | POST（`@PostMapping`） |
-| 参数位置 | URL 路径（`@PathVariable`） | 请求体 JSON（`@RequestBody`） |
-| 返回格式 | 直接返回 `PageDTO` | 包装在 `Result<PageDTO>` 中 |
-| 使用场景 | 前端直接查轨迹 | 管理后台列表查询 |
+| | `/hello/{orderid}` | `/findOrderList` | `/createOrder` |
+|---|---|---|---|
+| HTTP 方法 | GET | POST | POST |
+| 参数位置 | URL 路径（`@PathVariable`） | 请求体 JSON（`@RequestBody`） | 请求体 JSON（`@RequestBody`） |
+| 返回格式 | 直接返回 `PageDTO` | 包装在 `Result<PageDTO>` 中 | 包装在 `Result<String>` 中 |
+| 使用场景 | 按单号查轨迹 | 管理后台列表查询 | 创建订单 + 快递单 |
+| RPC 调用数 | 2（userorder + expresstrack） | 2（userorder + expresstrack） | 2（userorder + expresstrack） |
 
 ---
 
@@ -530,16 +553,26 @@ server.port=8005
 
 ```
 coffee-userorder/
-├── api/        接口定义层（"合同"）
-│               - 定义服务方法签名
-│               - 定义数据传输对象（DTO）
-│               - 打包成 jar，供 coffee-app 引用
-│               - 不包含任何实现代码
-│
-└── provider/   接口实现层（"履行合同"）
-                - 实现 api 层定义的接口
-                - 连接数据库，执行真正的查询
-                - 是独立运行的 Spring Boot 应用
+├── api/
+│   └── src/main/java/com/coffee/yun/userorder/api/
+│       ├── dto/
+│       │   ├── UserOrderInfoParamDTO.java    查询订单请求参数
+│       │   ├── UserOrderInfoResultDTO.java   查询订单返回结果
+│       │   └── UserOrderCreateDTO.java       创建订单请求参数
+│       └── service/
+│           └── UserOrderInfoService.java     服务接口
+└── provider/
+    └── src/main/
+        ├── java/com/coffee/yun/userorder/
+        │   ├── UserOrderApplication.java         启动类
+        │   └── provider/service/
+        │       └── UserOrderInfoServiceImpl.java  接口实现
+        └── resources/
+            ├── application.yml
+            ├── application-dev.yml
+            ├── logback-spring.xml
+            └── mapper/
+                └── UserOrderMapper.xml
 ```
 
 **为什么要分 api 和 provider？**
@@ -604,24 +637,55 @@ public class UserOrderInfoResultDTO {
 
 ---
 
+#### UserOrderCreateDTO.java — 创建订单请求参数
+
+携带创建订单所需的字段：
+
+```java
+package com.coffee.yun.userorder.api.dto;
+
+import lombok.Getter;
+import lombok.Setter;
+import java.io.Serializable;
+
+/**
+ * 创建订单请求参数 DTO
+ *
+ * 放在 api 模块的原因：coffee-app 通过 Dubbo 调用 createOrder() 时，
+ * 需要把此 DTO 序列化后通过网络传输，因此必须实现 Serializable，
+ * 且定义在 api 模块中，消费方才能引用同一个类。
+ *
+ * 请求体示例（POST /createOrder）：
+ *   { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.00 }
+ */
+@Getter
+@Setter
+public class UserOrderCreateDTO implements Serializable {
+    private static final long serialVersionUID = 1L;
+
+    private String order_id;      // 订单编号（建议使用 UUID 或雪花算法）
+    private String OneID;         // 会员唯一标识，关联 member 表
+    private float  order_amount;  // 订单金额（元）
+}
+```
+
+---
+
 #### UserOrderInfoService.java — 服务接口
 
 ```java
 package com.coffee.yun.userorder.api.service;
 
-import com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO;
-import com.coffee.yun.userorder.api.dto.UserOrderInfoResultDTO;
+import com.coffee.yun.dto.PageDTO;
+import com.coffee.yun.userorder.api.dto.*;
 
 /**
- * 用户订单查询服务接口——只定义"能做什么"，不写"怎么做"。
- *
- * Dubbo 通过这个接口进行服务注册和调用：
- *   - coffee-userorder-provider 注册："我实现了这个接口，地址是 xxx"
- *   - coffee-app 声明："我要调用这个接口"
- *   - Dubbo 在运行时自动将二者连接
+ * 用户订单服务接口——只定义"能做什么"，不写"怎么做"。
  */
 public interface UserOrderInfoService {
     UserOrderInfoResultDTO findUserOrderInfo(UserOrderInfoParamDTO param);
+    PageDTO<UserOrderInfoResultDTO> findUserOrderInfos(UserOrderInfoParamDTO param);
+    String createOrder(UserOrderCreateDTO createDTO);
 }
 ```
 
@@ -656,49 +720,33 @@ public class UserOrderApplication {
 #### UserOrderInfoServiceImpl.java — 接口实现
 
 ```java
-package com.coffee.yun.userorder.provider.service;
-
-import com.coffee.yun.dto.PageDTO;
-import com.coffee.yun.userorder.api.dto.*;
-import com.coffee.yun.userorder.api.service.UserOrderInfoService;
-import com.coffee.yun.userorder.provider.utils.PageUtil;
-import lombok.extern.slf4j.Slf4j;
-import org.apache.dubbo.config.annotation.DubboService;
-import org.mybatis.spring.SqlSessionTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
-
-/**
- * @DubboService  最关键的注解！
- *                作用：将这个类注册到 Nacos，标明"我是 UserOrderInfoService 的提供者"
- *                没有这个注解，coffee-app 就找不到这个服务
- *
- * @Slf4j         Lombok 注解，自动生成 Logger 对象 log
- *                等价于手写：private static final Logger log = LoggerFactory.getLogger(...)
- */
 @Slf4j
 @DubboService
 public class UserOrderInfoServiceImpl implements UserOrderInfoService {
 
-    @Autowired
-    private SqlSessionTemplate sqlSessionTemplate;  // MyBatis 执行 SQL 的模板
-
-    @Autowired
-    private PageUtil pageUtil;  // 封装了分页查询逻辑的工具类
+    @Autowired private SqlSessionTemplate sqlSessionTemplate;
+    @Autowired private PageUtil pageUtil;
 
     @Override
-    public UserOrderInfoResultDTO findUserOrderInfo(UserOrderInfoParamDTO param) {
-        log.info("查询订单信息，参数: {}", param.getOrder_id());
+    public UserOrderInfoResultDTO findUserOrderInfo(UserOrderInfoParamDTO dto) {
+        log.info("订单查询：{}", JSON.toJSONString(dto));
+        return sqlSessionTemplate.selectOne("UserOrderMapper.selectByParam", dto);
+    }
 
-        // 调用 PageUtil 执行分页查询
-        // "UserOrderMapper.selectByParam" 对应 UserOrderMapper.xml 中的 <select id="selectByParam">
-        PageDTO<UserOrderInfoResultDTO> pageResult =
-            pageUtil.selectPage("UserOrderMapper.selectByParam", param);
+    @Override
+    public PageDTO<UserOrderInfoResultDTO> findUserOrderInfos(UserOrderInfoParamDTO dto) {
+        return pageUtil.selectPage("UserOrderMapper.selectByParam", dto);
+    }
 
-        // 此方法用于精确查询单条订单，取第一条返回
-        if (pageResult.getList() != null && !pageResult.getList().isEmpty()) {
-            return pageResult.getList().get(0);
-        }
-        return null;
+    @Override
+    public String createOrder(UserOrderCreateDTO createDTO) {
+        Map<String, Object> params = new HashMap<>();
+        params.put("order_id",     createDTO.getOrder_id());
+        params.put("OneID",        createDTO.getOneID());
+        params.put("order_amount", createDTO.getOrder_amount());
+        params.put("order_status", "待发货");
+        sqlSessionTemplate.insert("UserOrderMapper.insertOrder", params);
+        return createDTO.getOrder_id();
     }
 }
 ```
@@ -880,13 +928,25 @@ import com.coffee.yun.expresstrack.api.dto.ExpressTrackInfoParamDTO;
 import com.coffee.yun.expresstrack.api.dto.ExpressTrackInfoResultDTO;
 
 /**
- * 快递轨迹查询接口。
- * 返回值是 PageDTO<ExpressTrackInfoResultDTO>（分页列表），
- * 因为一个订单通常有多条轨迹记录（揽收 → 转运 → 派送 → 签收）。
+ * 快递轨迹服务接口——定义快递服务对外暴露的所有能力。
  */
 public interface ExpressTrackInfoService {
+
+    /**
+     * 根据订单编号分页查询快递轨迹列表
+     * 一个订单通常有多条轨迹（揽收 → 转运 → 派送 → 签收），所以返回分页列表。
+     */
     PageDTO<ExpressTrackInfoResultDTO> findExpressTrackInfos(
         ExpressTrackInfoParamDTO expressTrackInfoParamDTO);
+
+    /**
+     * 为新订单同步创建快递单和初始轨迹记录
+     * 由 coffee-app 在 /createOrder 接口中，订单落库后通过 Dubbo RPC 调用。
+     * 执行两步写库：INSERT express + INSERT track（"商家已揽件"）。
+     *
+     * @param orderId 刚创建的订单编号
+     */
+    void createExpress(String orderId);
 }
 ```
 
@@ -923,6 +983,77 @@ public class ExpressTrackInfoResultDTO {
 ---
 
 ### 4.2 provider 子模块
+
+#### ExpresstrackInfoServiceImpl.java — 接口实现
+
+实现两个方法：一个查询轨迹，一个同步创建快递单（由 coffee-app 在下单后调用）：
+
+```java
+@Slf4j
+@DubboService
+public class ExpresstrackInfoServiceImpl implements ExpressTrackInfoService {
+
+    @Autowired private PageUtil pageUtil;
+    @Autowired private SqlSessionTemplate sqlSessionTemplate;  // 执行 INSERT 语句
+
+    /** 分页查询快递轨迹列表 */
+    @Override
+    public PageDTO<ExpressTrackInfoResultDTO> findExpressTrackInfos(
+            ExpressTrackInfoParamDTO dto) {
+        return pageUtil.selectPage("ExpressTrackMapper.selectByParam", dto);
+    }
+
+    /**
+     * 同步创建快递单 + 初始轨迹（被 coffee-app.createOrder 通过 Dubbo RPC 调用）
+     *
+     * 两步写库在同一次 RPC 调用中完成：
+     *   ① INSERT INTO express（express_id 在此方法内用 UUID 生成）
+     *   ② INSERT INTO track（"商家已揽件"初始轨迹）
+     */
+    @Override
+    public void createExpress(String orderId) {
+        // ① 生成快递单号，写 express 表
+        String expressId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        Map<String, Object> expressParams = new HashMap<>();
+        expressParams.put("express_id",     expressId);
+        expressParams.put("order_id",       orderId);
+        expressParams.put("express_weight", "1kg");
+        sqlSessionTemplate.insert("ExpressTrackMapper.insertExpress", expressParams);
+        log.info("快递单已创建，order_id={}，express_id={}", orderId, expressId);
+
+        // ② 写 track 表，插入第一条轨迹记录
+        String trackId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        Map<String, Object> trackParams = new HashMap<>();
+        trackParams.put("track_id",   trackId);
+        trackParams.put("express_id", expressId);
+        trackParams.put("track_show", "商家已揽件");
+        sqlSessionTemplate.insert("ExpressTrackMapper.insertTrack", trackParams);
+        log.info("初始轨迹已创建，express_id={}，状态=商家已揽件", expressId);
+    }
+}
+```
+
+**createOrder 的完整调用链：**
+
+```
+POST /createOrder（前端或 Postman）
+    ↓ HTTP
+  CoffeeController.createOrder()   ← coffee-app（网关，端口 8005）
+    ↓ Dubbo RPC（第一次）
+  UserOrderInfoServiceImpl.createOrder()  ← coffee-userorder（端口 7001）
+      → INSERT INTO order（写订单）
+      → 返回 orderId
+    ↓ Dubbo RPC（第二次，用第一次的 orderId）
+  ExpresstrackInfoServiceImpl.createExpress(orderId)  ← coffee-expresstrack（端口 8001）
+      → INSERT INTO express（写快递单，express_id 自动生成）
+      → INSERT INTO track（写初始轨迹"商家已揽件"）
+    ↓ 两个 RPC 都成功
+  返回 {"success":true,"result":"ORDER100"}
+```
+
+**关键点：** 两次 RPC 调用都由 `coffee-app` 发起，串行执行，整个过程对前端只有一次 HTTP 请求和响应，无需了解内部微服务边界。
+
+---
 
 #### ExpressTrackMapper.xml — SQL 映射文件
 
