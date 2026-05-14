@@ -74,7 +74,13 @@ mybatis:
 # ── RocketMQ 配置 ──────────────────────────────────────────
 rocketmq:
   name-server: ${ROCKETMQ_NAMESERVER:127.0.0.1:9876}
-  # 消费者组配置在 @RocketMQMessageListener 注解中定义，此处无需声明
+  # LOCAL = 自托管 RocketMQ（开发/本地）；CLOUD = 阿里云托管（生产由 application-prod.yml 覆盖）
+  access-channel: ${ROCKETMQ_ACCESS_CHANNEL:LOCAL}
+  # @RocketMQMessageListener 注解默认读取 rocketmq.consumer.access-key/secret-key
+  # 本地自托管无需设置；EDAS 生产通过环境变量注入
+  consumer:
+    access-key: ${ROCKETMQ_ACCESS_KEY:}
+    secret-key: ${ROCKETMQ_SECRET_KEY:}
 
 # ── Dubbo RPC 配置 ─────────────────────────────────────────
 dubbo:
