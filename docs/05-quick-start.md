@@ -100,7 +100,59 @@ Nacos started successfully in stand alone mode. use embedded storage
 
 ---
 
-## Step 2：确认数据库可用
+## Step 2：启动 Redis（可选 — 演示缓存时需要）
+
+> **默认可跳过**：配置文件中 `feature.cache.enabled=false`，Redis 未启动时项目仍能正常运行，所有查询直接走数据库。
+> 需要演示 Redis Cache-Aside 缓存效果时，才需要先启动 Redis 再将开关改为 `true`。
+
+**方式一：Docker 启动（推荐）**
+
+```bash
+docker run -d --name redis -p 6379:6379 redis:7-alpine
+```
+
+**方式二：本地安装版**
+
+```bash
+# 进入 Redis 安装目录
+cd D:\tools\Redis
+redis-server.exe redis.windows.conf
+```
+
+**验证：**
+
+```bash
+redis-cli ping    # 返回 PONG 即成功
+```
+
+---
+
+## Step 3：启动 RocketMQ（可选 — 演示消息队列时需要）
+
+> **默认可跳过**：配置文件中 `feature.mq.enabled=false`，RocketMQ 未启动时项目仍能正常运行，createOrder 只写数据库不发消息。
+> 需要演示订单创建异步触发快递单时，才需要先启动 RocketMQ 再将开关改为 `true`。
+
+```bash
+# 进入 RocketMQ 的 bin 目录
+cd D:\tools\rocketmq\bin
+
+# 启动 NameServer
+start mqnamesrv.cmd
+
+# 等待 NameServer 启动（约5秒），再启动 Broker
+start mqbroker.cmd -n localhost:9876 autoCreateTopicEnable=true
+```
+
+**验证：** 两个命令窗口均无报错，且以下命令有输出：
+
+```bash
+# Windows
+mqadmin.cmd clusterList -n localhost:9876
+```
+
+---
+
+## Step 4：确认数据库可用
 
 执行 [数据库初始化 SQL](./04-database.md#4-完整初始化-sql)，确保两个数据库都已创建并有测试数据。
 
@@ -118,7 +170,7 @@ SELECT * FROM track;     -- 应该看到 8 条轨迹数据
 
 ---
 
-## Step 3：安装本地 Maven 依赖
+## Step 5：安装本地 Maven 依赖
 
 由于三个 Java 项目之间存在依赖，需要先把公共包安装到本地 Maven 仓库（`~/.m2/repository`）。
 
@@ -159,7 +211,7 @@ mvn clean install -DskipTests
 
 ---
 
-## Step 4：配置数据库连接
+## Step 6：配置数据库连接
 
 每个微服务的 `application-dev.yml` 中需要填写实际的数据库连接信息。
 
@@ -197,7 +249,7 @@ nacos:
 
 ---
 
-## Step 5：启动订单微服务
+## Step 7：启动订单微服务
 
 **方法 A：在 IDEA 中启动（推荐）**
 
@@ -229,7 +281,7 @@ Started UserOrderApplication in x.xxx seconds (JVM running for x.xxx)
 
 ---
 
-## Step 6：启动快递微服务
+## Step 8：启动快递微服务
 
 同样的方式启动 `coffee-expresstrack/provider` 下的 `ExpressTrackApplication.java`。
 
@@ -243,7 +295,7 @@ Started ExpressTrackApplication in x.xxx seconds
 
 ---
 
-## Step 7：启动主应用网关
+## Step 9：启动主应用网关
 
 启动 `coffee-app` 下的 `CoffeeAppApplication.java`。
 
@@ -257,7 +309,7 @@ Started CoffeeAppApplication in x.xxx seconds (JVM running for x.xxx)
 
 ---
 
-## Step 8：测试后端接口
+## Step 10：测试后端接口
 
 打开浏览器，访问：
 
@@ -293,7 +345,7 @@ http://localhost:8005/hello/ORDER001
 
 ---
 
-## Step 9：启动前端
+## Step 11：启动前端
 
 ```bash
 # 进入前端目录

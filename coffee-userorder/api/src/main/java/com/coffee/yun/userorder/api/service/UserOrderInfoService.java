@@ -1,6 +1,7 @@
 package com.coffee.yun.userorder.api.service;
 
 import com.coffee.yun.dto.PageDTO;
+import com.coffee.yun.userorder.api.dto.UserOrderCreateDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoResultDTO;
 
@@ -40,5 +41,16 @@ public interface UserOrderInfoService {
      * @return 分页结果，包含总记录数、总页数、当前页订单列表
      */
     PageDTO<UserOrderInfoResultDTO> findUserOrderInfos(UserOrderInfoParamDTO userOrderInfoParamDTO);
+
+    /**
+     * 创建订单
+     *
+     * 将订单写入数据库，并（当 feature.mq.enabled=true 时）通过 RocketMQ
+     * 异步触发 coffee-expresstrack 创建快递单和初始轨迹记录。
+     *
+     * @param createDTO 订单创建参数（order_id、OneID、order_amount）
+     * @return 创建成功的订单编号
+     */
+    String createOrder(UserOrderCreateDTO createDTO);
 
 }

@@ -6,6 +6,7 @@ import com.coffee.yun.expresstrack.api.dto.ExpressTrackInfoResultDTO;
 import com.coffee.yun.expresstrack.api.service.ExpressTrackInfoService;
 import com.coffee.yun.coffeeapp.base.Result;
 import com.coffee.yun.coffeeapp.base.ResultUtil;
+import com.coffee.yun.userorder.api.dto.UserOrderCreateDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoResultDTO;
 import com.coffee.yun.userorder.api.service.UserOrderInfoService;
@@ -92,5 +93,23 @@ public class CoffeeController {
 
         // 用 ResultUtil 包装返回结果，自动设置 success=true, code=200
         return new ResultUtil<PageDTO>().setData(expressTrackInfoService.findExpressTrackInfos(expressTrackInfoParamDTO));
+    }
+
+    /**
+     * 创建订单（演示 RocketMQ 异步解耦）
+     *
+     * 当 feature.mq.enabled=true 时，coffee-userorder 写入订单后会向 RocketMQ 发布
+     * "order-created" 消息，coffee-expresstrack 消费消息后异步创建快递单和初始轨迹。
+     *
+     * 示例请求：POST http://localhost:8005/createOrder
+     * 请求体：{ "order_id": "ORDER099", "OneID": "ONE001", "order_amount": 99.9 }
+     *
+     * @param userOrderCreateDTO 订单创建参数
+     * @return 创建成功的订单编号
+     */
+    @PostMapping("createOrder")
+    public Result<String> createOrder(@RequestBody UserOrderCreateDTO userOrderCreateDTO) {
+        String orderId = userOrderInfoService.createOrder(userOrderCreateDTO);
+        return new ResultUtil<String>().setData(orderId);
     }
 }

@@ -25,4 +25,9 @@
             and m.member_name= #{member_name,jdbcType=VARCHAR}
         </if>
     </select>
+
+    <insert id="insertOrder" parameterType="map">
+        INSERT INTO `order` (order_id, OneID, order_amount, order_status)
+        VALUES (#{order_id}, #{OneID}, #{order_amount}, #{order_status})
+    </insert>
 </mapper>

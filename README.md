@@ -50,10 +50,13 @@
 | 服务间远程调用（RPC）| Apache Dubbo 2.7.x | 第4章 |
 | 持久层框架 | MyBatis + MySQL | 第5章 |
 | 云数据库 | 阿里云 RDS MySQL | 第6章 |
-| 日志收集 | 阿里云日志服务 SLS | 第7章 |
-| 制品管理 | 阿里云制品库（Maven 私服）| 第8章 |
-| 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第9章 |
-| 云原生部署与服务治理 | 阿里云 EDAS（dubbo2 分支用内置 Nacos；main 分支用 MSE Nacos）| 第10章 |
+| 高速缓存（Cache-Aside）| Redis + Spring Data Redis | 第7章 |
+| 消息队列（异步解耦）| Apache RocketMQ | 第8章 |
+| 动态配置中心 | Nacos Config + @RefreshScope | 第9章 |
+| 日志收集 | 阿里云日志服务 SLS | 第10章 |
+| 制品管理 | 阿里云制品库（Maven 私服）| 第11章 |
+| 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第12章 |
+| 云原生部署与服务治理 | 阿里云 EDAS（dubbo2 分支用内置 Nacos；main 分支用 MSE Nacos）| 第13章 |
 
 ---
 
@@ -67,14 +70,19 @@
 ├── Nacos 1.4.x（注册中心）           ├── Vue Router 4.x（路由）
 ├── MyBatis 2.x（ORM）               └── Axios 1.x（HTTP 请求）
 ├── MySQL 8.0
+├── Redis（高速缓存）
+├── Apache RocketMQ（消息队列）
+├── SCA 2021.0.5.0（Nacos Config）
 └── Maven（构建）                    阿里云
                                     ├── RDS MySQL（云数据库）
+                                    ├── Tair/Redis（云缓存）
+                                    ├── RocketMQ（云消息队列）
                                     ├── EDAS（应用托管 + 服务治理）
                                     │   └── 内置 Nacos（兼容 Dubbo 2.x）
                                     ├── 日志服务 SLS
                                     └── 制品库（Maven 私服）
 
-# main 分支使用：Java 17 / Spring Boot 3.3.4 / Dubbo 3.3.4 / MSE Nacos
+# main 分支使用：Java 17 / Spring Boot 3.3.4 / Dubbo 3.3.4 / MSE Nacos / SCA 2023.0.1.0
 ```
 
 ---
@@ -93,15 +101,23 @@ coffee-app（API网关 :8005）        ← 统一对外入口
   ▼                    ▼
 coffee-userorder    coffee-expresstrack
   (:7001)              (:8001, Dubbo :28888)
-  │ JDBC               │ JDBC
+  │ Cache-Aside        │ Cache-Aside
+  ▼                    ▼
+Redis :6379         Redis :6379（共享实例）
+  │ JDBC miss          │ JDBC miss
   ▼                    ▼
 RDS MySQL           RDS MySQL
 (userordertest)     (expresstracktest)
   │                    │
-  └────────┬───────────┘
-           ▼
-      Nacos :8848
-   （服务注册与发现）
+  │  MQ publish        │ MQ consume
+  └──────┐             └──────┐
+         ▼                    ▼
+     RocketMQ :9876  ─────────┘
+   （order-created topic）
+         │
+         └──► coffee-expresstrack 异步创建快递单
+
+  （所有服务均注册到 Nacos :8848）
 ```
 
 > 详细架构说明请阅读 [架构详解](docs/02-architecture.md)。

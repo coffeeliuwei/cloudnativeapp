@@ -6,3 +6,22 @@ database:
   password: ${DB_PASSWORD:Userordertest123}
   host: ${DB_HOST:rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com:3306}
   dbname: ${DB_NAME:userordertest}
+
+# ── Redis（生产环境通过环境变量注入阿里云 Tair/Redis 地址）──
+# Spring Boot 2.x 使用 spring.redis.*
+spring:
+  redis:
+    host: ${REDIS_HOST:localhost}
+    port: ${REDIS_PORT:6379}
+    password: ${REDIS_PASSWORD:}
+
+# ── RocketMQ（生产环境通过环境变量注入阿里云 RocketMQ 地址）─
+rocketmq:
+  name-server: ${ROCKETMQ_NAMESERVER:127.0.0.1:9876}
+
+# ── 功能开关（生产环境默认全部开启）──────────────────────────
+feature:
+  cache:
+    enabled: true
+  mq:
+    enabled: true
