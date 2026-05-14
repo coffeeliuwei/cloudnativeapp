@@ -29,14 +29,6 @@ spring:
     # 时区设置为东八区（北京时间），防止日期字段差8小时
     time-zone: GMT+8
 
-  # ── Redis 缓存配置 ─────────────────────────────────────────
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-      timeout: 2000ms
-
   # ── Nacos 动态配置中心 ─────────────────────────────────────
   # optional: 前缀表示 Nacos 不可用时不阻断启动
   # Nacos 中存储的数据 ID：coffee-expresstrack.properties
@@ -70,17 +62,6 @@ mybatis:
     # 开发阶段打印完整 SQL 语句到控制台，方便调试
     # 生产环境建议改为 org.apache.ibatis.logging.slf4j.Slf4jImpl（输出到日志文件）
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
-
-# ── RocketMQ 配置 ──────────────────────────────────────────
-rocketmq:
-  name-server: ${ROCKETMQ_NAMESERVER:127.0.0.1:9876}
-  # LOCAL = 自托管 RocketMQ（开发/本地）；CLOUD = 阿里云托管（生产由 application-prod.yml 覆盖）
-  access-channel: ${ROCKETMQ_ACCESS_CHANNEL:LOCAL}
-  # @RocketMQMessageListener 注解默认读取 rocketmq.consumer.access-key/secret-key
-  # 本地自托管无需设置；EDAS 生产通过环境变量注入
-  consumer:
-    access-key: ${ROCKETMQ_ACCESS_KEY:}
-    secret-key: ${ROCKETMQ_SECRET_KEY:}
 
 # ── Dubbo RPC 配置 ─────────────────────────────────────────
 dubbo:

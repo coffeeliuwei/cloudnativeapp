@@ -24,29 +24,3 @@ database:
 
   # 数据库名称
   dbname: ${DB_NAME:expresstracktest}
-
-# ── Redis（开发环境默认连本地）──────────────────────────────
-spring:
-  data:
-    redis:
-      host: ${REDIS_HOST:localhost}
-      port: ${REDIS_PORT:6379}
-      password: ${REDIS_PASSWORD:}
-
-# ── RocketMQ（Name Server 默认为空，未配置时自动跳过 RocketMQ 初始化）
-rocketmq:
-  name-server: ${ROCKETMQ_NAMESERVER:}
-
-# ── 缓存 TTL 默认值（可在 Nacos Config 中覆盖，无需重启生效）──
-# Nacos 数据 ID：coffee-expresstrack.properties
-cache:
-  ttl:
-    # 快递轨迹缓存时长（秒），默认 1 小时（轨迹数据更新频率低）
-    expresstrack: 3600
-
-# ── 功能开关（默认全部关闭，保持原项目可正常启动）────────────
-feature:
-  cache:
-    enabled: false   # true = 启用 Redis 缓存（需先启动 Redis）
-  mq:
-    enabled: false   # true = 启用 RocketMQ（需先启动 RocketMQ 并设置 ROCKETMQ_NAMESERVER）
