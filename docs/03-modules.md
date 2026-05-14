@@ -535,18 +535,15 @@ coffee-userorder/
 │       ├── dto/
 │       │   ├── UserOrderInfoParamDTO.java    查询订单请求参数
 │       │   ├── UserOrderInfoResultDTO.java   查询订单返回结果
-│       │   └── UserOrderCreateDTO.java       创建订单请求参数（RocketMQ 演示用）
+│       │   └── UserOrderCreateDTO.java       创建订单请求参数
 │       └── service/
-│           └── UserOrderInfoService.java     服务接口（含 createOrder 方法）
+│           └── UserOrderInfoService.java     服务接口
 └── provider/
     └── src/main/
         ├── java/com/coffee/yun/userorder/
         │   ├── UserOrderApplication.java         启动类
-        │   ├── config/
-        │   │   ├── RedisConfig.java               Redis 序列化配置（JSON 存储）
-        │   │   └── CacheProperties.java           缓存 TTL 配置（支持 Nacos 热更新）
         │   └── provider/service/
-        │       └── UserOrderInfoServiceImpl.java  接口实现（含缓存 + RocketMQ 逻辑）
+        │       └── UserOrderInfoServiceImpl.java  接口实现
         └── resources/
             ├── application.yml
             ├── application-dev.yml
@@ -619,7 +616,7 @@ public class UserOrderInfoResultDTO {
 
 #### UserOrderCreateDTO.java — 创建订单请求参数
 
-这是为 RocketMQ 演示新增的 DTO，携带创建订单所需的字段：
+携带创建订单所需的字段：
 
 ```java
 package com.coffee.yun.userorder.api.dto;
@@ -661,15 +658,11 @@ import com.coffee.yun.userorder.api.dto.*;
 
 /**
  * 用户订单服务接口——只定义"能做什么"，不写"怎么做"。
- *
- * 新增 createOrder() 用于演示 RocketMQ 异步解耦：
- *   coffee-app 调用 createOrder() → 订单入库 → 发布 MQ 消息
- *   coffee-expresstrack 异步消费消息 → 创建快递单
  */
 public interface UserOrderInfoService {
     UserOrderInfoResultDTO findUserOrderInfo(UserOrderInfoParamDTO param);
     PageDTO<UserOrderInfoResultDTO> findUserOrderInfos(UserOrderInfoParamDTO param);
-    String createOrder(UserOrderCreateDTO createDTO);  // 新增：创建订单 + 触发 MQ
+    String createOrder(UserOrderCreateDTO createDTO);
 }
 ```
 
@@ -701,83 +694,7 @@ public class UserOrderApplication {
 
 ---
 
-#### RedisConfig.java — Redis 序列化配置
-
-Spring Boot 默认的 `RedisTemplate` 使用 JDK 序列化，key 和 value 都是二进制乱码，无法在 `redis-cli` 中直接阅读。本配置类将其替换为：**key 用字符串**、**value 用 JSON**。
-
-```java
-@Configuration
-public class RedisConfig {
-
-    @Bean
-    public RedisTemplate<String, Object> redisTemplate(RedisConnectionFactory factory) {
-        RedisTemplate<String, Object> template = new RedisTemplate<>();
-        template.setConnectionFactory(factory);
-
-        // key 序列化：直接存为 UTF-8 字符串，redis-cli 可读
-        StringRedisSerializer stringSerializer = new StringRedisSerializer();
-        template.setKeySerializer(stringSerializer);
-        template.setHashKeySerializer(stringSerializer);
-
-        // value 序列化：存为 JSON，并嵌入类型信息供反序列化时还原正确的 Java 类型
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.setVisibility(PropertyAccessor.ALL, JsonAutoDetect.Visibility.ANY);
-        objectMapper.activateDefaultTyping(
-                LaissezFaireSubTypeValidator.instance, ObjectMapper.DefaultTyping.NON_FINAL);
-
-        // Spring Boot 3.x 新 API（旧版用 setObjectMapper()）
-        Jackson2JsonRedisSerializer<Object> jsonSerializer =
-                new Jackson2JsonRedisSerializer<>(objectMapper, Object.class);
-        template.setValueSerializer(jsonSerializer);
-        template.setHashValueSerializer(jsonSerializer);
-
-        template.afterPropertiesSet();
-        return template;
-    }
-}
-```
-
-**Redis key 命名规范（本服务）：**
-
-```
-order:detail:{order_id}      示例：order:detail:ORDER001
-```
-
-在 `redis-cli` 中可以用 `KEYS order:detail:*` 查看所有订单缓存。
-
----
-
-#### CacheProperties.java — 缓存 TTL 配置（支持 Nacos 热更新）
-
-```java
-@Getter
-@Setter
-@Component
-@RefreshScope   // 关键：让这个 Bean 在 Nacos 配置变更时自动重建，读取最新值
-public class CacheProperties {
-
-    // 从 Nacos Config 或本地配置读取，默认 1800 秒（30 分钟）
-    // 在 Nacos 控制台修改 cache.ttl.order=60 后，下次缓存写入立即使用新值，无需重启
-    @Value("${cache.ttl.order:1800}")
-    private long orderTtl;
-}
-```
-
-**`@RefreshScope` 工作流程：**
-
-```
-Nacos 控制台修改 cache.ttl.order=60
-    ↓ Spring Cloud 检测到配置变更，触发 ContextRefreshedEvent
-    ↓ RefreshScope 销毁旧的 CacheProperties Bean
-    ↓ 下次注入时重新创建，@Value 读取新值 60
-    ↓ 下一次缓存写入时 TTL=60s（无需重启任何服务）
-```
-
----
-
-#### UserOrderInfoServiceImpl.java — 接口实现（含缓存 + RocketMQ）
-
-这是本服务改造的核心文件，新增了三项能力（均可通过配置开关控制）：
+#### UserOrderInfoServiceImpl.java — 接口实现
 
 ```java
 @Slf4j
@@ -786,86 +703,30 @@ public class UserOrderInfoServiceImpl implements UserOrderInfoService {
 
     @Autowired private SqlSessionTemplate sqlSessionTemplate;
     @Autowired private PageUtil pageUtil;
-    @Autowired private RedisTemplate<String, Object> redisTemplate;
-    @Autowired private CacheProperties cacheProperties;
 
-    // required=false：没有 RocketMQ 时不报错，Bean 保持 null
-    @Autowired(required = false)
-    private RocketMQTemplate rocketMQTemplate;
-
-    @Value("${feature.cache.enabled:false}")
-    private boolean cacheEnabled;   // dev 默认 false，prod 默认 true
-
-    @Value("${feature.mq.enabled:false}")
-    private boolean mqEnabled;      // dev 默认 false，prod 默认 true
-
-    private static final String CACHE_KEY_PREFIX   = "order:detail:";
-    private static final String ORDER_CREATED_TOPIC = "order-created";
-
-    /** 查询单条订单——Cache-Aside Pattern（旁路缓存）*/
     @Override
-    public UserOrderInfoResultDTO findUserOrderInfo(UserOrderInfoParamDTO param) {
-        String orderId = param.getOrder_id();
-
-        if (cacheEnabled && orderId != null && !orderId.isEmpty()) {
-            String cacheKey = CACHE_KEY_PREFIX + orderId;
-
-            // ① 先查 Redis
-            Object cached = redisTemplate.opsForValue().get(cacheKey);
-            if (cached != null) {
-                log.info("缓存命中，order_id={}", orderId);
-                return (UserOrderInfoResultDTO) cached;  // 直接返回，不查数据库
-            }
-
-            // ② 缓存未命中，查数据库
-            UserOrderInfoResultDTO result = sqlSessionTemplate.selectOne(
-                    "UserOrderMapper.selectByParam", param);
-
-            // ③ 写回 Redis（TTL 由 Nacos Config 控制，支持热更新）
-            if (result != null) {
-                redisTemplate.opsForValue().set(cacheKey, result,
-                        cacheProperties.getOrderTtl(), TimeUnit.SECONDS);
-            }
-            return result;
-        }
-
-        // cacheEnabled=false：直接查数据库（与改造前行为相同）
-        return sqlSessionTemplate.selectOne("UserOrderMapper.selectByParam", param);
+    public UserOrderInfoResultDTO findUserOrderInfo(UserOrderInfoParamDTO dto) {
+        log.info("订单查询：{}", JSON.toJSONString(dto));
+        return sqlSessionTemplate.selectOne("UserOrderMapper.selectByParam", dto);
     }
 
-    /** 创建订单——写数据库 + 可选发布 RocketMQ 消息 */
+    @Override
+    public PageDTO<UserOrderInfoResultDTO> findUserOrderInfos(UserOrderInfoParamDTO dto) {
+        return pageUtil.selectPage("UserOrderMapper.selectByParam", dto);
+    }
+
     @Override
     public String createOrder(UserOrderCreateDTO createDTO) {
-        // ① 写入 order 表
         Map<String, Object> params = new HashMap<>();
         params.put("order_id",     createDTO.getOrder_id());
         params.put("OneID",        createDTO.getOneID());
         params.put("order_amount", createDTO.getOrder_amount());
         params.put("order_status", "待发货");
         sqlSessionTemplate.insert("UserOrderMapper.insertOrder", params);
-
-        // ② 发布消息（feature.mq.enabled=true 时才执行）
-        if (mqEnabled && rocketMQTemplate != null) {
-            try {
-                rocketMQTemplate.send(ORDER_CREATED_TOPIC,
-                        MessageBuilder.withPayload(createDTO.getOrder_id()).build());
-                log.info("消息已发布，topic={}", ORDER_CREATED_TOPIC);
-            } catch (Exception e) {
-                // MQ 失败不影响下单，仅记录警告
-                log.warn("RocketMQ 消息发布失败：{}", e.getMessage());
-            }
-        }
         return createDTO.getOrder_id();
     }
 }
 ```
-
-**功能开关设计的意义：**
-
-| 开关 | dev（本地） | prod（生产） | 说明 |
-|------|------------|------------|------|
-| `feature.cache.enabled` | false | true | 本地没有 Redis 也能启动 |
-| `feature.mq.enabled` | false | true | 本地没有 RocketMQ 也能启动 |
 
 **`@DubboService` / `@DubboReference` 与 Spring 注解的核心区别：**
 
@@ -1020,13 +881,8 @@ coffee-expresstrack/
     └── src/main/
         ├── java/com/coffee/yun/expresstrack/
         │   ├── ExpressTrackApplication.java     启动类
-        │   ├── config/
-        │   │   ├── RedisConfig.java              Redis 序列化配置（JSON 存储）
-        │   │   └── CacheProperties.java          缓存 TTL 配置（支持 Nacos 热更新）
-        │   ├── mq/
-        │   │   └── OrderCreatedConsumer.java     RocketMQ 消费者（异步创建快递单）
         │   └── provider/service/
-        │       └── ExpresstrackInfoServiceImpl.java   实现类（含缓存逻辑）
+        │       └── ExpresstrackInfoServiceImpl.java   实现类
         └── resources/
             ├── application.yml
             ├── application-dev.yml
@@ -1093,120 +949,7 @@ public class ExpressTrackInfoResultDTO {
 
 ### 4.2 provider 子模块
 
-#### RedisConfig.java — Redis 序列化配置
-
-与 `coffee-userorder` 中的 `RedisConfig.java` 结构完全相同，区别仅在于 key 前缀和 value 类型：
-
-- **key** 格式：`express:track:{order_id}`，示例：`express:track:ORDER001`
-- **value** 类型：`PageDTO<ExpressTrackInfoResultDTO>`（分页列表）
-
-序列化配置代码见 [coffee-userorder RedisConfig 说明](#redisconfigjava--redis-序列化配置)，原理一致。
-
----
-
-#### CacheProperties.java — 缓存 TTL 配置（支持 Nacos 热更新）
-
-```java
-@Getter
-@Setter
-@Component
-@RefreshScope   // Nacos Config 变更时自动重建 Bean，TTL 立即生效
-public class CacheProperties {
-
-    // 从 Nacos Config 读取，默认 3600 秒（1 小时）
-    // 在 Nacos 控制台修改 coffee-expresstrack.properties 中的 cache.ttl.expresstrack=60
-    // 下次缓存写入立即使用新值，无需重启
-    @Value("${cache.ttl.expresstrack:3600}")
-    private long expresstrackTtl;
-}
-```
-
-**Nacos Config 配置示例：**
-
-```
-Data ID：coffee-expresstrack.properties
-Group：DEFAULT_GROUP
-内容：cache.ttl.expresstrack=60
-```
-
----
-
-#### OrderCreatedConsumer.java — RocketMQ 消息消费者（核心新增文件）
-
-这是 RocketMQ 异步解耦的核心实现。当 `coffee-userorder` 创建订单并发布消息后，本类负责异步消费消息，为订单创建快递单和初始轨迹记录。
-
-```java
-@Slf4j
-@Component
-// 条件装配：仅当 feature.mq.enabled=true 时注册此 Bean，否则不连 RocketMQ，本地无 MQ 也能启动
-@ConditionalOnProperty(name = "feature.mq.enabled", havingValue = "true", matchIfMissing = false)
-// 声明监听的 Topic 和消费者分组
-@RocketMQMessageListener(
-        topic = "order-created",
-        consumerGroup = "expresstrack-consumer-group"
-)
-public class OrderCreatedConsumer implements RocketMQListener<String> {
-
-    @Autowired
-    private SqlSessionTemplate sqlSessionTemplate;
-
-    /**
-     * RocketMQ 框架收到消息后自动调用此方法
-     * @param orderId  消息体，即刚创建的订单编号（由 UserOrderInfoServiceImpl.createOrder() 发布）
-     */
-    @Override
-    public void onMessage(String orderId) {
-        log.info("收到订单创建消息，order_id={}，开始创建快递单", orderId);
-
-        // 步骤 1：创建快递单（INSERT INTO express）
-        String expressId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-        Map<String, Object> expressParams = new HashMap<>();
-        expressParams.put("express_id",     expressId);
-        expressParams.put("order_id",       orderId);
-        expressParams.put("express_weight", "1kg");
-        sqlSessionTemplate.insert("ExpressTrackMapper.insertExpress", expressParams);
-
-        // 步骤 2：创建初始轨迹记录（INSERT INTO track）
-        String trackId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
-        Map<String, Object> trackParams = new HashMap<>();
-        trackParams.put("track_id",   trackId);
-        trackParams.put("express_id", expressId);
-        trackParams.put("track_show", "商家已揽件");
-        sqlSessionTemplate.insert("ExpressTrackMapper.insertTrack", trackParams);
-    }
-}
-```
-
-**消息流转图：**
-
-```
-POST /createOrder
-    → coffee-app
-    → Dubbo RPC
-    → UserOrderInfoServiceImpl.createOrder()
-        ① INSERT INTO order（写数据库）
-        ② rocketMQTemplate.send("order-created", orderId)  ← 立即返回成功给用户
-                                    ↓ 异步（后台）
-                    RocketMQ Broker 存储消息
-                                    ↓
-            OrderCreatedConsumer.onMessage(orderId)
-                ① INSERT INTO express（创建快递单）
-                ② INSERT INTO track（"商家已揽件"）
-```
-
-**关键注解说明：**
-
-| 注解 | 作用 |
-|------|------|
-| `@ConditionalOnProperty` | 功能开关：`feature.mq.enabled=false` 时不创建此 Bean |
-| `@RocketMQMessageListener` | 声明 Topic 和消费者组，Starter 自动创建消费者连接 |
-| `implements RocketMQListener<String>` | 消息体类型为 String，与生产者发送的 orderId 对应 |
-
----
-
-#### ExpresstrackInfoServiceImpl.java — 接口实现（含 Redis 缓存）
-
-查询轨迹时的 Cache-Aside Pattern：
+#### ExpresstrackInfoServiceImpl.java — 接口实现
 
 ```java
 @Slf4j
@@ -1214,44 +957,11 @@ POST /createOrder
 public class ExpresstrackInfoServiceImpl implements ExpressTrackInfoService {
 
     @Autowired private PageUtil pageUtil;
-    @Autowired private RedisTemplate<String, Object> redisTemplate;
-    @Autowired private CacheProperties cacheProperties;
-
-    @Value("${feature.cache.enabled:false}")
-    private boolean cacheEnabled;
-
-    private static final String CACHE_KEY_PREFIX = "express:track:";
 
     @Override
-    @SuppressWarnings("unchecked")
     public PageDTO<ExpressTrackInfoResultDTO> findExpressTrackInfos(
-            ExpressTrackInfoParamDTO param) {
-        String orderId = param.getOrder_id();
-
-        if (cacheEnabled && orderId != null && !orderId.isEmpty()) {
-            String cacheKey = CACHE_KEY_PREFIX + orderId;
-
-            // ① 查 Redis
-            Object cached = redisTemplate.opsForValue().get(cacheKey);
-            if (cached != null) {
-                log.info("缓存命中，order_id={}", orderId);
-                return (PageDTO<ExpressTrackInfoResultDTO>) cached;
-            }
-
-            // ② 查数据库
-            PageDTO<ExpressTrackInfoResultDTO> result =
-                    pageUtil.selectPage("ExpressTrackMapper.selectByParam", param);
-
-            // ③ 写回 Redis，TTL 由 Nacos Config 控制
-            if (result != null) {
-                redisTemplate.opsForValue().set(
-                        cacheKey, result, cacheProperties.getExpresstrackTtl(), TimeUnit.SECONDS);
-            }
-            return result;
-        }
-
-        // 直通路径：关闭缓存时直接查数据库
-        return pageUtil.selectPage("ExpressTrackMapper.selectByParam", param);
+            ExpressTrackInfoParamDTO dto) {
+        return pageUtil.selectPage("ExpressTrackMapper.selectByParam", dto);
     }
 }
 ```

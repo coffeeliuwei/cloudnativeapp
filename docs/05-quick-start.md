@@ -87,86 +87,14 @@ Nacos started successfully in stand alone mode. use embedded storage
 | 菜单位置 | 用途 | 本项目如何使用 |
 |---------|------|-------------|
 | 服务管理 → 服务列表 | 查看所有已注册的微服务及健康状态 | 启动微服务后在此验证注册情况 |
-| 配置管理 → 配置列表 | 集中管理配置文件（动态推送） | 存放 Redis TTL 等动态配置项 |
+| 配置管理 → 配置列表 | 集中管理配置文件（动态推送） | 存放动态配置项（支持热更新） |
 | 命名空间 | 隔离不同环境（dev/test/prod） | 本项目使用默认命名空间 |
 
 > **保持这个命令窗口开着！** 关闭它会停止 Nacos，所有微服务将丢失注册信息，Dubbo 调用会立即失败并报 `No provider available`。
 
 ---
 
-## Step 2：启动 Redis（高速缓存）
-
-Redis 用于缓存热点订单和快递轨迹数据，减少数据库查询压力。
-
-**Windows 启动方式：**
-
-```bash
-# 进入 Redis 安装目录（替换为你的实际路径）
-cd D:\tools\redis
-
-# 启动 Redis 服务
-redis-server.exe redis.windows.conf
-```
-
-**成功标志：** 命令窗口显示：
-
-```
-Ready to accept connections
-```
-
-**验证连接：**
-
-```bash
-redis-cli ping
-# 返回 PONG 表示成功
-```
-
-> 如果没有安装 Redis，可从 [Redis 官网](https://redis.io/download) 下载，或使用 Docker：
-> ```bash
-> docker run -d --name redis -p 6379:6379 redis:7
-> ```
-
----
-
-## Step 3：启动 RocketMQ（消息队列）
-
-RocketMQ 用于订单创建后异步通知快递服务，需要先启动 Name Server，再启动 Broker。
-
-**第一步：启动 Name Server（消息路由中心）**
-
-```bash
-cd D:\tools\rocketmq\bin
-mqnamesrv.cmd
-```
-
-**成功标志：**
-
-```
-The Name Server boot success. ...
-```
-
-**第二步：新开一个命令窗口，启动 Broker（消息代理）**
-
-```bash
-cd D:\tools\rocketmq\bin
-mqbroker.cmd -n localhost:9876
-```
-
-**成功标志：**
-
-```
-The broker[broker-a, ...] boot success ...
-```
-
-> 如果没有安装 RocketMQ，可从 [Apache RocketMQ](https://rocketmq.apache.org/download/) 下载 5.x 版本，或使用 Docker：
-> ```bash
-> docker run -d --name namesrv -p 9876:9876 apache/rocketmq:5.1.4 sh mqnamesrv
-> docker run -d --name broker -p 10911:10911 -e NAMESRV_ADDR=host.docker.internal:9876 apache/rocketmq:5.1.4 sh mqbroker
-> ```
-
----
-
-## Step 4：确认数据库可用
+## Step 2：确认数据库可用
 
 执行 [数据库初始化 SQL](./04-database.md#4-完整初始化-sql)，确保两个数据库都已创建并有测试数据。
 
@@ -184,7 +112,7 @@ SELECT * FROM track;     -- 应该看到 8 条轨迹数据
 
 ---
 
-## Step 5：安装本地 Maven 依赖
+## Step 3：安装本地 Maven 依赖
 
 由于三个 Java 项目之间存在依赖，需要先把公共包安装到本地 Maven 仓库（`~/.m2/repository`）。
 
@@ -225,7 +153,7 @@ mvn clean install -DskipTests
 
 ---
 
-## Step 6：配置数据库连接
+## Step 4：配置数据库连接
 
 每个微服务的 `application-dev.yml` 中需要填写实际的数据库连接信息。
 
@@ -263,7 +191,7 @@ nacos:
 
 ---
 
-## Step 7：启动订单微服务
+## Step 5：启动订单微服务
 
 **方法 A：在 IDEA 中启动（推荐）**
 
@@ -295,7 +223,7 @@ Started UserOrderApplication in x.xxx seconds (JVM running for x.xxx)
 
 ---
 
-## Step 8：启动快递微服务
+## Step 6：启动快递微服务
 
 同样的方式启动 `coffee-expresstrack/provider` 下的 `ExpressTrackApplication.java`。
 
@@ -309,7 +237,7 @@ Started ExpressTrackApplication in x.xxx seconds
 
 ---
 
-## Step 9：启动主应用网关
+## Step 7：启动主应用网关
 
 启动 `coffee-app` 下的 `CoffeeAppApplication.java`。
 
@@ -323,7 +251,7 @@ Started CoffeeAppApplication in x.xxx seconds (JVM running for x.xxx)
 
 ---
 
-## Step 10：测试后端接口
+## Step 8：测试后端接口
 
 打开浏览器，访问：
 
@@ -357,12 +285,7 @@ http://localhost:8005/hello/ORDER001
 
 看到这个 JSON，后端已经完全跑起来了。
 
-**验证 Redis 缓存效果：**
-
-第一次查询时，日志中会看到 `写入缓存，order_id=ORDER001`（说明走了数据库）。  
-立刻**再查询一次**，日志中会看到 `缓存命中，order_id=ORDER001`（说明走了 Redis，没有访问数据库）。
-
-**验证 RocketMQ 消息队列（创建订单）：**
+**验证创建订单接口：**
 
 ```bash
 # 使用 curl 或 Postman 调用创建订单接口
@@ -376,28 +299,14 @@ curl -X POST http://localhost:8005/createOrder \
 {"success":true,"code":200,"result":"ORDER100"}
 ```
 
-查看 coffee-userorder 日志，应该看到：
-```
-订单写入数据库成功，order_id=ORDER100
-消息已发布到 RocketMQ，topic=order-created，order_id=ORDER100
-```
-
-查看 coffee-expresstrack 日志，应该看到（1秒内）：
-```
-收到订单创建消息，order_id=ORDER100，开始创建快递单
-快递单创建成功，express_id=...
-初始轨迹记录创建成功，状态=商家已揽件
-```
-
 随后查询轨迹：
 ```
 GET http://localhost:8005/hello/ORDER100
 ```
-应看到一条"商家已揽件"的轨迹记录。
 
 ---
 
-## Step 11：启动前端
+## Step 9：启动前端
 
 ```bash
 # 进入前端目录
