@@ -8,6 +8,7 @@ database:
   dbname: ${DB_NAME:expresstracktest}
 
 # ── Redis（生产环境通过环境变量注入阿里云 Tair/Redis 地址）──
+# 注意：使用默认账号时 REDIS_PASSWORD 填密码；使用自定义账号时填 "用户名:密码"
 # Spring Boot 2.x 使用 spring.redis.*
 spring:
   redis:
@@ -15,9 +16,15 @@ spring:
     port: ${REDIS_PORT:6379}
     password: ${REDIS_PASSWORD:}
 
-# ── RocketMQ（生产环境通过环境变量注入阿里云 RocketMQ 地址）─
+# ── RocketMQ（生产环境连接阿里云托管 RocketMQ，需 AccessKey 认证）──
+# ROCKETMQ_NAMESERVER：控制台"接入点"地址，格式 host:9876
+# ROCKETMQ_ACCESS_KEY / ROCKETMQ_SECRET_KEY：RAM 子账号 AccessKey，从控制台获取
 rocketmq:
   name-server: ${ROCKETMQ_NAMESERVER:127.0.0.1:9876}
+  access-channel: CLOUD
+  consumer:
+    access-key: ${ROCKETMQ_ACCESS_KEY:}
+    secret-key: ${ROCKETMQ_SECRET_KEY:}
 
 # ── 功能开关（生产环境默认全部开启）──────────────────────────
 feature:
