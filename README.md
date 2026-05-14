@@ -2,24 +2,8 @@
 
 **课程**：云原生应用框架与开发 ｜ **讲师**：coffeeliu ｜ **邮箱**：coffee.liu@gmail.com
 
-> 本项目是课程的完整配套代码，演示基于 **Spring Boot + Apache Dubbo + Nacos + MySQL + Vue.js** 的微服务电商系统。
+> 本项目是课程的完整配套代码，演示基于 **Spring Boot + Apache Dubbo + Nacos + MySQL + Vue.js** 的云原生微服务电商系统。
 > 即使你从未接触过微服务，跟着文档也能一步步把项目跑起来。
-
----
-
-> **当前分支：`dubbo2`（Dubbo 2.7.x 兼容版）**
->
-> 本分支为 EDAS 内置 Nacos 兼容版，与 `main` 分支（Dubbo 3.x）并存，用于教学对比。两个版本的主要差异：
->
-> | 项目 | `main` 分支 | `dubbo2` 分支（本分支） |
-> |------|------------|----------------------|
-> | Java 版本 | 17 | **11** |
-> | Spring Boot | 3.3.4 | **2.7.18** |
-> | Dubbo | 3.3.4 | **2.7.23** |
-> | EDAS 注册中心 | MSE Nacos（需单独购买） | **EDAS 内置 Nacos**（无需额外费用） |
-> | EDAS Java 环境 | Java 17 | **Open JDK 11** |
->
-> 如需切换到 Dubbo 3.x 版本：`git checkout main`
 
 ---
 
@@ -47,42 +31,33 @@
 |--------|---------|---------|
 | 微服务拆分思想 | 订单服务 / 快递服务 独立部署 | 第2章 |
 | 服务注册与发现 | Alibaba Nacos | 第3章 |
-| 服务间远程调用（RPC）| Apache Dubbo 2.7.x | 第4章 |
+| 服务间远程调用（RPC）| Apache Dubbo | 第4章 |
 | 持久层框架 | MyBatis + MySQL | 第5章 |
 | 云数据库 | 阿里云 RDS MySQL | 第6章 |
-| 高速缓存（Cache-Aside）| Redis + Spring Data Redis | 第7章 |
-| 消息队列（异步解耦）| Apache RocketMQ | 第8章 |
-| 动态配置中心 | Nacos Config + @RefreshScope | 第9章 |
-| 日志收集 | 阿里云日志服务 SLS | 第10章 |
-| 制品管理 | 阿里云制品库（Maven 私服）| 第11章 |
-| 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第12章 |
-| 云原生部署与服务治理 | 阿里云 EDAS（dubbo2 分支用内置 Nacos；main 分支用 MSE Nacos）| 第13章 |
+| **动态配置中心** | **Nacos Config** | **第7章** |
+| 日志收集 | 阿里云日志服务 SLS | 第8章 |
+| 制品管理 | 阿里云制品库（Maven 私服）| 第9章 |
+| 前端框架 | Vue.js 3.4 + ViewUI Plus 1.x | 第10章 |
+| 云原生部署与服务治理 | 阿里云 EDAS + MSE Nacos | 第11章 |
 
 ---
 
 ## 技术栈
 
 ```
-后端（dubbo2 分支）                  前端
-├── Java 11                         ├── Vue.js 3.4
-├── Spring Boot 2.7.18              ├── ViewUI Plus 1.x（UI 组件库）
-├── Apache Dubbo 2.7.23（RPC）       ├── Vuex 4.x（状态管理）
-├── Nacos 1.4.x（注册中心）           ├── Vue Router 4.x（路由）
-├── MyBatis 2.x（ORM）               └── Axios 1.x（HTTP 请求）
+后端                               前端
+├── Java 17                        ├── Vue.js 3.4
+├── Spring Boot 3.3.4              ├── ViewUI Plus 1.x（UI 组件库）
+├── Apache Dubbo 3.3.4（RPC）       ├── Vuex 4.x（状态管理）
+├── Nacos 2.x（注册中心 + 配置中心）  ├── Vue Router 4.x（路由）
+├── MyBatis 3.x（ORM）              └── Axios 1.x（HTTP 请求）
 ├── MySQL 8.0
-├── Redis（高速缓存）
-├── Apache RocketMQ（消息队列）
-├── SCA 2021.0.5.0（Nacos Config）
-└── Maven（构建）                    阿里云
-                                    ├── RDS MySQL（云数据库）
-                                    ├── Tair/Redis（云缓存）
-                                    ├── RocketMQ（云消息队列）
-                                    ├── EDAS（应用托管 + 服务治理）
-                                    │   └── 内置 Nacos（兼容 Dubbo 2.x）
-                                    ├── 日志服务 SLS
-                                    └── 制品库（Maven 私服）
-
-# main 分支使用：Java 17 / Spring Boot 3.3.4 / Dubbo 3.3.4 / MSE Nacos / SCA 2023.0.1.0
+└── Maven（构建）                   阿里云
+                                   ├── RDS MySQL（云数据库）
+                                   ├── MSE Nacos（托管注册中心 + 配置中心）
+                                   ├── EDAS（应用托管 + 服务治理）
+                                   ├── 日志服务 SLS
+                                   └── 制品库（Maven 私服）
 ```
 
 ---
@@ -96,28 +71,20 @@
 app-admin（Vue.js 前端 :8080）
   │ HTTP REST
   ▼
-coffee-app（API网关 :8005）        ← 统一对外入口
-  │ Dubbo RPC          │ Dubbo RPC
-  ▼                    ▼
-coffee-userorder    coffee-expresstrack
-  (:7001)              (:8001, Dubbo :28888)
-  │ Cache-Aside        │ Cache-Aside
-  ▼                    ▼
-Redis :6379         Redis :6379（共享实例）
-  │ JDBC miss          │ JDBC miss
-  ▼                    ▼
-RDS MySQL           RDS MySQL
-(userordertest)     (expresstracktest)
-  │                    │
-  │  MQ publish        │ MQ consume
-  └──────┐             └──────┐
-         ▼                    ▼
-     RocketMQ :9876  ─────────┘
-   （order-created topic）
-         │
-         └──► coffee-expresstrack 异步创建快递单
-
-  （所有服务均注册到 Nacos :8848）
+coffee-app（API网关 :8005）          ← 统一对外入口
+  │ Dubbo RPC              │ Dubbo RPC
+  ▼                        ▼
+coffee-userorder        coffee-expresstrack
+  (:7001)                  (:8001, Dubbo :28888)
+  │ JDBC                   │ JDBC
+  ▼                        ▼
+RDS MySQL               RDS MySQL
+(userordertest)         (expresstracktest)
+        │              │
+        └──────┬───────┘
+               ▼
+          Nacos :8848
+    （服务注册 + 动态配置中心）
 ```
 
 > 详细架构说明请阅读 [架构详解](docs/02-architecture.md)。
@@ -180,23 +147,23 @@ cloudnativeapp/
 
 ### 1. 环境要求
 
-| 工具 | main 分支 | dubbo2 分支（本分支） | 必须 |
-|------|-----------|---------------------|------|
-| JDK | 17 | **11** | ✅ |
-| Maven | 3.8+ | 3.8+ | ✅ |
-| Node.js | 16+ | 16+ | ✅ |
-| Nacos | 2.x | 1.4.x / 2.x | ✅ |
-| MySQL | 8.0 或阿里云RDS | 8.0 或阿里云RDS | ✅ |
+| 工具 | 版本 | 必须 |
+|------|------|------|
+| JDK | 17+ | ✅ |
+| Maven | 3.8+ | ✅ |
+| Node.js | 16+ | ✅ |
+| Nacos | 2.x | ✅ |
+| MySQL | 8.0 或阿里云RDS | ✅ |
 
 ### 2. 启动顺序（必须按序）
 
 ```bash
-# 第1步：启动 Nacos（服务注册中心）
+# 第1步：启动 Nacos（服务注册中心 + 配置中心）
 cd nacos/bin && startup.cmd -m standalone
 
 # 第2步：安装本地依赖（首次使用）
-cd coffee-common          && mvn clean install -DskipTests
-cd coffee-userorder/api   && mvn clean install -DskipTests
+cd coffee-common           && mvn clean install -DskipTests
+cd coffee-userorder/api    && mvn clean install -DskipTests
 cd coffee-expresstrack/api && mvn clean install -DskipTests
 
 # 第3步：启动订单微服务
@@ -214,9 +181,16 @@ cd app-admin && npm install && npm run dev
 
 ### 3. 验证
 
-浏览器访问：`http://localhost:8005/hello/ORDER001`
+```bash
+# 查询快递轨迹
+GET http://localhost:8005/hello/ORDER001
 
-返回快递轨迹 JSON 数据即表示成功。
+# 创建订单（同步创建快递单）
+POST http://localhost:8005/createOrder
+Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
+# 订单写入 MySQL 后，Dubbo RPC 同步调用 coffee-expresstrack 创建快递单
+# 立即用 GET /hello/ORDER100 即可查到"商家已揽件"轨迹
+```
 
 > 详细步骤和截图说明请阅读 [快速启动指南](docs/05-quick-start.md)。
 
@@ -226,7 +200,7 @@ cd app-admin && npm install && npm run dev
 
 | 服务 | 端口 | 说明 |
 |------|------|------|
-| Nacos | 8848 | 服务注册中心 |
+| Nacos | 8848 | 服务注册中心 + 动态配置中心 |
 | coffee-userorder | 7001 | 订单微服务 |
 | coffee-expresstrack | 8001 | 快递微服务 HTTP |
 | coffee-expresstrack | 28888 | 快递微服务 Dubbo RPC |
@@ -241,6 +215,7 @@ cd app-admin && npm install && npm run dev
 |------|------|------|------|------|
 | 查询快递轨迹 | GET | `/hello/{orderid}` | 路径参数：订单ID | 返回该订单的快递轨迹列表 |
 | 查询订单 | POST | `/findOrderList` | Body: `{"order_id":"xxx"}` | 返回订单及快递信息 |
+| **创建订单** | **POST** | **`/createOrder`** | Body: `{"order_id":"xxx","OneID":"yyy","order_amount":99.0}` | **写入订单，Dubbo RPC 同步创建快递单** |
 
 ---
 
@@ -251,7 +226,7 @@ cd app-admin && npm install && npm run dev
 | 服务 | 用途 | 配置位置 |
 |------|------|---------|
 | RDS MySQL | 云数据库 | `application-dev.yml` / `application-prod.yml` |
-| MSE Nacos | 托管注册中心（生产环境）| EDAS 微服务空间绑定，代码无需配置地址 |
+| MSE Nacos | 托管注册中心 + 配置中心（生产环境）| EDAS 微服务空间绑定 |
 | EDAS | 应用托管、Dubbo 服务治理 | EDAS 控制台，JVM 参数 `-DENV=prod` |
 | 日志服务 SLS | 集中日志收集 | `logback-spring.xml` |
 | 制品库 | Maven 私有仓库 | `pom.xml` 的 `distributionManagement` |
@@ -275,6 +250,9 @@ cd app-admin && npm install && npm run dev
 
 **Q：数据库连接失败？**
 > 检查 `application-dev.yml` 中的数据库地址和账号密码。阿里云 RDS 还需在白名单中添加本机IP。
+
+**Q：`createOrder` 接口成功但查不到快递轨迹？**
+> createOrder 通过 Dubbo RPC 同步创建快递单，调用成功后立即可查。若查不到，请检查 coffee-expresstrack 的日志是否有"快递单已创建"的输出，确认该服务正常运行。
 
 > 更多问题解答请查阅 [快速启动指南](docs/05-quick-start.md#常见错误速查)。
 
