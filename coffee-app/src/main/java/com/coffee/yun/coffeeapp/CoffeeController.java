@@ -96,26 +96,35 @@ public class CoffeeController {
     }
 
     /**
-     * 创建订单（演示 RocketMQ 异步解耦）
+     * 创建订单并同步创建快递单（Dubbo RPC 同步调用）
      *
      * 调用流程：
      *   1. 接收前端传来的订单创建参数
      *   2. Dubbo RPC 调用 coffee-userorder.createOrder()
-     *   3. coffee-userorder 写入 MySQL 并发布 "order-created" 消息到 RocketMQ
-     *   4. coffee-expresstrack 异步消费消息，创建快递单（对本接口透明）
-     *   5. 立即返回 order_id，不等待快递单创建完成
+     *      → coffee-userorder 将订单写入 userordertest 数据库的 order 表，返回 order_id
+     *   3. Dubbo RPC 调用 coffee-expresstrack.createExpress(orderId)
+     *      → coffee-expresstrack 写入 express 表（快递单）和 track 表（"商家已揽件"初始轨迹）
+     *   4. 两个 RPC 调用都成功后，返回 order_id 给前端
      *
-     * 演示要点：
-     *   - 调用此接口后，可在 RocketMQ 控制台看到消息投递记录
-     *   - 在 coffee-expresstrack 日志中能看到消费日志
-     *   - 最终可通过 /hello/{order_id} 查到快递轨迹
+     * 关键设计点：
+     *   - 两个 RPC 调用由 coffee-app 串行编排，调用方（前端）只需等待一次响应
+     *   - 若 createExpress 失败，抛出异常，前端收到错误响应（简化实现，无分布式事务）
+     *   - 适合教学演示：调用链路完全可见，无异步消息中间件
      *
      * 示例请求：POST http://localhost:8005/createOrder
      * 请求体：{ "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
+     *
+     * 验证：调用后立即 GET /hello/ORDER100，即可看到"商家已揽件"轨迹
      */
     @PostMapping("createOrder")
     public Result<String> createOrder(@RequestBody UserOrderCreateDTO userOrderCreateDTO) {
+        // 第一步：Dubbo RPC 调用 coffee-userorder，将订单写入 order 表
         String orderId = userOrderInfoService.createOrder(userOrderCreateDTO);
+
+        // 第二步：Dubbo RPC 调用 coffee-expresstrack，同步创建快递单和初始轨迹
+        // createExpress 内部完成两步写库：INSERT express + INSERT track（"商家已揽件"）
+        expressTrackInfoService.createExpress(orderId);
+
         return new ResultUtil<String>().setData(orderId);
     }
 }

@@ -30,4 +30,16 @@ public interface ExpressTrackInfoService {
      * @return 分页结果，list 中每条数据代表一个物流节点（如揽件、转运、签收）
      */
     PageDTO<ExpressTrackInfoResultDTO> findExpressTrackInfos(ExpressTrackInfoParamDTO expressTrackInfoParamDTO);
+
+    /**
+     * 为新订单同步创建快递单和初始轨迹记录
+     *
+     * 调用时机：coffee-app 在 /createOrder 接口中，订单写入 MySQL 后通过 Dubbo RPC 同步调用此方法。
+     * 执行两步写库：
+     *   1. INSERT INTO express（快递单基本信息，express_id 在此方法内自动生成）
+     *   2. INSERT INTO track（第一条轨迹，内容固定为"商家已揽件"）
+     *
+     * @param orderId 刚创建的订单编号，用于关联 express 表中的 order_id 字段
+     */
+    void createExpress(String orderId);
 }

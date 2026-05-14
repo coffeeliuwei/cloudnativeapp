@@ -9,9 +9,9 @@
         <result column="track_show" property="track_show" jdbcType="VARCHAR" />
     </resultMap>
     <!--
-        创建快递单（RocketMQ 消费者场景）
-        由 OrderCreatedConsumer 在收到 "order-created" 消息后调用，
-        为新订单自动创建快递单记录。
+        创建快递单
+        由 ExpresstrackInfoServiceImpl.createExpress() 调用，
+        在 coffee-app 的 /createOrder 接口通过 Dubbo RPC 触发。
     -->
     <insert id="insertExpress" parameterType="map">
         INSERT INTO `express` (express_id, order_id, express_weight)
@@ -19,9 +19,9 @@
     </insert>
 
     <!--
-        创建快递轨迹节点（RocketMQ 消费者场景）
-        快递单创建后，同步插入第一条轨迹记录（"商家已揽件"），
-        表示快递服务已接收到该订单。
+        创建快递轨迹节点
+        快递单创建后紧接着写入第一条轨迹（"商家已揽件"），
+        在同一次 Dubbo RPC 调用中完成，与 insertExpress 顺序执行。
     -->
     <insert id="insertTrack" parameterType="map">
         INSERT INTO `track` (track_id, express_id, track_show)

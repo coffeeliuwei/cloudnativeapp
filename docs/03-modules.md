@@ -455,17 +455,40 @@ public class CoffeeController {
         // ResultUtil 将数据包装进统一响应体 Result<T>
         return new ResultUtil<PageDTO<ExpressTrackInfoResultDTO>>().setData(trackPage);
     }
+
+    /**
+     * 接口3：POST /createOrder
+     * 创建订单并同步创建快递单（Dubbo RPC 同步编排）
+     *
+     * 两个 Dubbo RPC 调用串行执行，由 coffee-app 统一编排：
+     *   ① userOrderInfoService.createOrder()   → order 表写入订单
+     *   ② expressTrackInfoService.createExpress() → express 表写快递单 + track 表写"商家已揽件"
+     *
+     * 调用后立即 GET /hello/{order_id} 即可查到轨迹记录。
+     */
+    @PostMapping("createOrder")
+    public Result<String> createOrder(@RequestBody UserOrderCreateDTO userOrderCreateDTO) {
+        // 第一步：Dubbo RPC 调用 coffee-userorder，将订单写入 order 表
+        String orderId = userOrderInfoService.createOrder(userOrderCreateDTO);
+
+        // 第二步：Dubbo RPC 调用 coffee-expresstrack，同步创建快递单和初始轨迹
+        // createExpress 内部完成两步写库：INSERT express + INSERT track（"商家已揽件"）
+        expressTrackInfoService.createExpress(orderId);
+
+        return new ResultUtil<String>().setData(orderId);
+    }
 }
 ```
 
-**两个接口的对比：**
+**三个接口的对比：**
 
-| | `/hello/{orderid}` | `/findOrderList` |
-|---|---|---|
-| HTTP 方法 | GET（`@GetMapping`） | POST（`@PostMapping`） |
-| 参数位置 | URL 路径（`@PathVariable`） | 请求体 JSON（`@RequestBody`） |
-| 返回格式 | 直接返回 `PageDTO` | 包装在 `Result<PageDTO>` 中 |
-| 使用场景 | 前端直接查轨迹 | 管理后台列表查询 |
+| | `/hello/{orderid}` | `/findOrderList` | `/createOrder` |
+|---|---|---|---|
+| HTTP 方法 | GET | POST | POST |
+| 参数位置 | URL 路径（`@PathVariable`） | 请求体 JSON（`@RequestBody`） | 请求体 JSON（`@RequestBody`） |
+| 返回格式 | 直接返回 `PageDTO` | 包装在 `Result<PageDTO>` 中 | 包装在 `Result<String>` 中 |
+| 使用场景 | 按单号查轨迹 | 管理后台列表查询 | 创建订单 + 快递单 |
+| RPC 调用数 | 2（userorder + expresstrack） | 2（userorder + expresstrack） | 2（userorder + expresstrack） |
 
 ---
 
@@ -905,13 +928,25 @@ import com.coffee.yun.expresstrack.api.dto.ExpressTrackInfoParamDTO;
 import com.coffee.yun.expresstrack.api.dto.ExpressTrackInfoResultDTO;
 
 /**
- * 快递轨迹查询接口。
- * 返回值是 PageDTO<ExpressTrackInfoResultDTO>（分页列表），
- * 因为一个订单通常有多条轨迹记录（揽收 → 转运 → 派送 → 签收）。
+ * 快递轨迹服务接口——定义快递服务对外暴露的所有能力。
  */
 public interface ExpressTrackInfoService {
+
+    /**
+     * 根据订单编号分页查询快递轨迹列表
+     * 一个订单通常有多条轨迹（揽收 → 转运 → 派送 → 签收），所以返回分页列表。
+     */
     PageDTO<ExpressTrackInfoResultDTO> findExpressTrackInfos(
         ExpressTrackInfoParamDTO expressTrackInfoParamDTO);
+
+    /**
+     * 为新订单同步创建快递单和初始轨迹记录
+     * 由 coffee-app 在 /createOrder 接口中，订单落库后通过 Dubbo RPC 调用。
+     * 执行两步写库：INSERT express + INSERT track（"商家已揽件"）。
+     *
+     * @param orderId 刚创建的订单编号
+     */
+    void createExpress(String orderId);
 }
 ```
 
@@ -951,20 +986,72 @@ public class ExpressTrackInfoResultDTO {
 
 #### ExpresstrackInfoServiceImpl.java — 接口实现
 
+实现两个方法：一个查询轨迹，一个同步创建快递单（由 coffee-app 在下单后调用）：
+
 ```java
 @Slf4j
 @DubboService
 public class ExpresstrackInfoServiceImpl implements ExpressTrackInfoService {
 
     @Autowired private PageUtil pageUtil;
+    @Autowired private SqlSessionTemplate sqlSessionTemplate;  // 执行 INSERT 语句
 
+    /** 分页查询快递轨迹列表 */
     @Override
     public PageDTO<ExpressTrackInfoResultDTO> findExpressTrackInfos(
             ExpressTrackInfoParamDTO dto) {
         return pageUtil.selectPage("ExpressTrackMapper.selectByParam", dto);
     }
+
+    /**
+     * 同步创建快递单 + 初始轨迹（被 coffee-app.createOrder 通过 Dubbo RPC 调用）
+     *
+     * 两步写库在同一次 RPC 调用中完成：
+     *   ① INSERT INTO express（express_id 在此方法内用 UUID 生成）
+     *   ② INSERT INTO track（"商家已揽件"初始轨迹）
+     */
+    @Override
+    public void createExpress(String orderId) {
+        // ① 生成快递单号，写 express 表
+        String expressId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        Map<String, Object> expressParams = new HashMap<>();
+        expressParams.put("express_id",     expressId);
+        expressParams.put("order_id",       orderId);
+        expressParams.put("express_weight", "1kg");
+        sqlSessionTemplate.insert("ExpressTrackMapper.insertExpress", expressParams);
+        log.info("快递单已创建，order_id={}，express_id={}", orderId, expressId);
+
+        // ② 写 track 表，插入第一条轨迹记录
+        String trackId = UUID.randomUUID().toString().replace("-", "").substring(0, 16);
+        Map<String, Object> trackParams = new HashMap<>();
+        trackParams.put("track_id",   trackId);
+        trackParams.put("express_id", expressId);
+        trackParams.put("track_show", "商家已揽件");
+        sqlSessionTemplate.insert("ExpressTrackMapper.insertTrack", trackParams);
+        log.info("初始轨迹已创建，express_id={}，状态=商家已揽件", expressId);
+    }
 }
 ```
+
+**createOrder 的完整调用链：**
+
+```
+POST /createOrder（前端或 Postman）
+    ↓ HTTP
+  CoffeeController.createOrder()   ← coffee-app（网关，端口 8005）
+    ↓ Dubbo RPC（第一次）
+  UserOrderInfoServiceImpl.createOrder()  ← coffee-userorder（端口 7001）
+      → INSERT INTO order（写订单）
+      → 返回 orderId
+    ↓ Dubbo RPC（第二次，用第一次的 orderId）
+  ExpresstrackInfoServiceImpl.createExpress(orderId)  ← coffee-expresstrack（端口 8001）
+      → INSERT INTO express（写快递单，express_id 自动生成）
+      → INSERT INTO track（写初始轨迹"商家已揽件"）
+    ↓ 两个 RPC 都成功
+  返回 {"success":true,"result":"ORDER100"}
+```
+
+**关键点：** 两次 RPC 调用都由 `coffee-app` 发起，串行执行，整个过程对前端只有一次 HTTP 请求和响应，无需了解内部微服务边界。
 
 ---
 
