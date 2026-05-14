@@ -18,7 +18,22 @@
     <properties>
         <java.version>17</java.version>
         <dubbo.version>3.3.4</dubbo.version>
+        <spring-cloud-alibaba.version>2023.0.1.0</spring-cloud-alibaba.version>
+        <rocketmq-starter.version>2.3.0</rocketmq-starter.version>
     </properties>
+
+    <!-- Spring Cloud Alibaba BOM：统一管理 Nacos Config 等 SCA 组件版本 -->
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>com.alibaba.cloud</groupId>
+                <artifactId>spring-cloud-alibaba-dependencies</artifactId>
+                <version>${spring-cloud-alibaba.version}</version>
+                <type>pom</type>
+                <scope>import</scope>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
 
     <dependencies>
         <dependency>
@@ -74,6 +89,31 @@
             <groupId>com.google.protobuf</groupId>
             <artifactId>protobuf-java</artifactId>
             <version>3.25.3</version>
+        </dependency>
+
+        <!-- Redis：高速缓存，缓存热点快递轨迹数据，减少数据库压力 -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-starter-data-redis</artifactId>
+        </dependency>
+
+        <!-- RocketMQ：消息队列，消费订单创建事件，异步创建快递单 -->
+        <dependency>
+            <groupId>org.apache.rocketmq</groupId>
+            <artifactId>rocketmq-spring-boot-starter</artifactId>
+            <version>${rocketmq-starter.version}</version>
+        </dependency>
+
+        <!-- Nacos Config：动态配置中心，支持不重启服务热更新配置项 -->
+        <dependency>
+            <groupId>com.alibaba.cloud</groupId>
+            <artifactId>spring-cloud-starter-alibaba-nacos-config</artifactId>
+        </dependency>
+
+        <!-- Spring Cloud Context：提供 @RefreshScope 支持，配合 Nacos Config 实现配置热刷新 -->
+        <dependency>
+            <groupId>org.springframework.cloud</groupId>
+            <artifactId>spring-cloud-context</artifactId>
         </dependency>
 
         <dependency>

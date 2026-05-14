@@ -9,6 +9,16 @@
         <result column="order_amount" property="order_amount" jdbcType="VARCHAR" />
         <result column="order_status" property="order_status" jdbcType="VARCHAR" />
     </resultMap>
+    <!--
+        创建订单（RocketMQ 演示场景）
+        由 UserOrderInfoServiceImpl.createOrder() 调用，
+        写入成功后发布消息到 RocketMQ，触发 coffee-expresstrack 异步创建快递单。
+    -->
+    <insert id="insertOrder" parameterType="map">
+        INSERT INTO `order` (order_id, OneID, order_amount, order_status)
+        VALUES (#{order_id}, #{OneID}, #{order_amount}, #{order_status})
+    </insert>
+
     <select id="selectByParam" resultMap="BaseResultMap" parameterType="com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO">
         select m.member_name,
         m.member_phone,

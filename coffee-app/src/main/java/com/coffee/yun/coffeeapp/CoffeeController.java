@@ -6,6 +6,7 @@ import com.coffee.yun.expresstrack.api.dto.ExpressTrackInfoResultDTO;
 import com.coffee.yun.expresstrack.api.service.ExpressTrackInfoService;
 import com.coffee.yun.coffeeapp.base.Result;
 import com.coffee.yun.coffeeapp.base.ResultUtil;
+import com.coffee.yun.userorder.api.dto.UserOrderCreateDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoResultDTO;
 import com.coffee.yun.userorder.api.service.UserOrderInfoService;
@@ -92,5 +93,29 @@ public class CoffeeController {
 
         // 用 ResultUtil 包装返回结果，自动设置 success=true, code=200
         return new ResultUtil<PageDTO>().setData(expressTrackInfoService.findExpressTrackInfos(expressTrackInfoParamDTO));
+    }
+
+    /**
+     * 创建订单（演示 RocketMQ 异步解耦）
+     *
+     * 调用流程：
+     *   1. 接收前端传来的订单创建参数
+     *   2. Dubbo RPC 调用 coffee-userorder.createOrder()
+     *   3. coffee-userorder 写入 MySQL 并发布 "order-created" 消息到 RocketMQ
+     *   4. coffee-expresstrack 异步消费消息，创建快递单（对本接口透明）
+     *   5. 立即返回 order_id，不等待快递单创建完成
+     *
+     * 演示要点：
+     *   - 调用此接口后，可在 RocketMQ 控制台看到消息投递记录
+     *   - 在 coffee-expresstrack 日志中能看到消费日志
+     *   - 最终可通过 /hello/{order_id} 查到快递轨迹
+     *
+     * 示例请求：POST http://localhost:8005/createOrder
+     * 请求体：{ "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
+     */
+    @PostMapping("createOrder")
+    public Result<String> createOrder(@RequestBody UserOrderCreateDTO userOrderCreateDTO) {
+        String orderId = userOrderInfoService.createOrder(userOrderCreateDTO);
+        return new ResultUtil<String>().setData(orderId);
     }
 }

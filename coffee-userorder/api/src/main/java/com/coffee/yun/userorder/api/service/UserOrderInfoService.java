@@ -1,6 +1,7 @@
 package com.coffee.yun.userorder.api.service;
 
 import com.coffee.yun.dto.PageDTO;
+import com.coffee.yun.userorder.api.dto.UserOrderCreateDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO;
 import com.coffee.yun.userorder.api.dto.UserOrderInfoResultDTO;
 
@@ -40,5 +41,22 @@ public interface UserOrderInfoService {
      * @return 分页结果，包含总记录数、总页数、当前页订单列表
      */
     PageDTO<UserOrderInfoResultDTO> findUserOrderInfos(UserOrderInfoParamDTO userOrderInfoParamDTO);
+
+    /**
+     * 创建订单（RocketMQ 生产者入口）
+     *
+     * 完整流程：
+     *   1. 将订单写入 MySQL userordertest.order 表
+     *   2. 向 RocketMQ topic "order-created" 发布消息（携带 order_id）
+     *   3. coffee-expresstrack 消费该消息，异步创建对应快递单
+     *
+     * 这是异步解耦的典型示例：
+     *   - 订单服务不直接调用快递服务，两者通过消息队列解耦
+     *   - 即使快递服务临时不可用，订单仍可成功创建，消息会等待消费
+     *
+     * @param createDTO 创建参数，包含 order_id、OneID、order_amount
+     * @return 创建成功的 order_id
+     */
+    String createOrder(UserOrderCreateDTO createDTO);
 
 }
