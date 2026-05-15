@@ -46,19 +46,21 @@
 
 ```
 后端                               前端
-├── Java 17                        ├── Vue.js 3.4
-├── Spring Boot 3.3.4              ├── ViewUI Plus 1.x（UI 组件库）
-├── Apache Dubbo 3.3.4（RPC）       ├── Vuex 4.x（状态管理）
+├── Java 11                        ├── Vue.js 3.4
+├── Spring Boot 2.7.18             ├── ViewUI Plus 1.x（UI 组件库）
+├── Apache Dubbo 2.7.23（RPC）      ├── Vuex 4.x（状态管理）
 ├── Nacos 2.x（注册中心 + 配置中心）  ├── Vue Router 4.x（路由）
 ├── MyBatis 3.x（ORM）              └── Axios 1.x（HTTP 请求）
 ├── MySQL 8.0
 └── Maven（构建）                   阿里云
                                    ├── RDS MySQL（云数据库）
-                                   ├── MSE Nacos（托管注册中心 + 配置中心）
+                                   ├── MSE Nacos / EDAS 内置 Nacos
                                    ├── EDAS（应用托管 + 服务治理）
                                    ├── 日志服务 SLS
                                    └── 制品库（Maven 私服）
 ```
+
+> 注：本分支（dubbo2）使用 Dubbo 2.7.x + Spring Boot 2.7.x，与 main 分支（Dubbo 3.x + Spring Boot 3.x）并存，供教学场景切换。
 
 ---
 
@@ -134,11 +136,14 @@ cloudnativeapp/
 │
 └── app-admin/                  Vue.js 管理前端（端口8080）
     └── src/
-        ├── api/                接口调用封装
+        ├── api/
+        │   └── index.js        业务接口封装（findOrders / findOrderList / createOrder）
         ├── components/         公共Vue组件
         ├── router/             页面路由配置
-        ├── store/              Vuex状态管理
-        └── view/               页面组件
+        ├── store/              Vuex状态管理（登录为本地校验，无需后端auth接口）
+        └── view/
+            ├── order-manage/   订单管理页（列表 + 新建订单）
+            └── order/          轨迹查询页（按订单号查快递轨迹）
 ```
 
 ---
@@ -149,7 +154,7 @@ cloudnativeapp/
 
 | 工具 | 版本 | 必须 |
 |------|------|------|
-| JDK | 17+ | ✅ |
+| JDK | 11+ | ✅ |
 | Maven | 3.8+ | ✅ |
 | Node.js | 16+ | ✅ |
 | Nacos | 2.x | ✅ |
@@ -185,12 +190,23 @@ cd app-admin && npm install && npm run dev
 # 查询快递轨迹
 GET http://localhost:8005/hello/ORDER001
 
+# 分页查询订单列表
+POST http://localhost:8005/findOrders
+Body: { "pageNum": 1, "pageSize": 10 }
+
 # 创建订单（同步创建快递单）
 POST http://localhost:8005/createOrder
 Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
 # 订单写入 MySQL 后，Dubbo RPC 同步调用 coffee-expresstrack 创建快递单
 # 立即用 GET /hello/ORDER100 即可查到"商家已揽件"轨迹
 ```
+
+### 4. 前端登录说明
+
+前端采用**本地校验**登录（无需后端 `/login` 接口），输入任意非空用户名和密码即可进入。  
+登录后左侧菜单有两个页面：
+- **订单管理**：展示订单列表，支持搜索和新建订单
+- **轨迹查询**：输入订单号查询快递轨迹
 
 > 详细步骤和截图说明请阅读 [快速启动指南](docs/05-quick-start.md)。
 
@@ -213,8 +229,9 @@ Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
 
 | 接口 | 方法 | 路径 | 参数 | 说明 |
 |------|------|------|------|------|
-| 查询快递轨迹 | GET | `/hello/{orderid}` | 路径参数：订单ID | 返回该订单的快递轨迹列表 |
-| 查询订单 | POST | `/findOrderList` | Body: `{"order_id":"xxx"}` | 返回订单及快递信息 |
+| 查询快递轨迹（简单） | GET | `/hello/{orderid}` | 路径参数：订单ID | 返回该订单的快递轨迹列表 |
+| 查询快递轨迹（分页） | POST | `/findOrderList` | Body: `{"order_id":"xxx","pageNum":1,"pageSize":10}` | 按订单号分页查询轨迹，order_id 为空时返回全部 |
+| **查询订单列表** | **POST** | **`/findOrders`** | Body: `{"order_id":"xxx","member_name":"张三","pageNum":1,"pageSize":10}` | **分页查询订单，支持按订单号/会员名过滤** |
 | **创建订单** | **POST** | **`/createOrder`** | Body: `{"order_id":"xxx","OneID":"yyy","order_amount":99.0}` | **写入订单，Dubbo RPC 同步创建快递单** |
 
 ---

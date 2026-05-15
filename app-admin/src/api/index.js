@@ -14,7 +14,17 @@ const postComplexRequest = (url, params) => {
   })
 }
 
-// 获取订单列表（含快递轨迹）
+// 获取快递轨迹列表（按 order_id 过滤）
 export const findOrderList = (params) => {
   return postComplexRequest('/findOrderList', params)
+}
+
+// 获取订单列表（分页，可按 order_id / member_name 过滤）
+export const findOrders = (params) => {
+  return postComplexRequest('/findOrders', params)
+}
+
+// 创建订单并同步建快递单
+export const createOrder = (params) => {
+  return postComplexRequest('/createOrder', params)
 }

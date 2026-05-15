@@ -84,41 +84,69 @@ public class CoffeeController {
      */
     @PostMapping("findOrderList")
     public Result<PageDTO> findOrderList(@RequestBody UserOrderInfoParamDTO userOrderInfoParamDTO) {
-        // 第一步：Dubbo RPC 调用订单服务，获取订单详情
-        UserOrderInfoResultDTO userOrderInfoResultDTO = userOrderInfoService.findUserOrderInfo(userOrderInfoParamDTO);
-
-        // 第二步：用订单中的 order_id 查询快递轨迹
+        // 直接按 order_id 分页查询快递轨迹，order_id 为空时返回全部记录。
+        // 不再经过订单服务中转，避免空 order_id 时 selectOne 返回 null 导致 NPE。
         ExpressTrackInfoParamDTO expressTrackInfoParamDTO = new ExpressTrackInfoParamDTO();
-        expressTrackInfoParamDTO.setOrder_id(userOrderInfoResultDTO.getOrder_id());
-
-        // 用 ResultUtil 包装返回结果，自动设置 success=true, code=200
+        expressTrackInfoParamDTO.setOrder_id(userOrderInfoParamDTO.getOrder_id());
+        expressTrackInfoParamDTO.setPageNum(userOrderInfoParamDTO.getPageNum());
+        expressTrackInfoParamDTO.setPageSize(userOrderInfoParamDTO.getPageSize());
         return new ResultUtil<PageDTO>().setData(expressTrackInfoService.findExpressTrackInfos(expressTrackInfoParamDTO));
     }
 
     /**
-     * 创建订单（同步 Dubbo RPC 调用两个微服务）
+     * 分页查询订单列表
+     *
+     * 与 findOrderList 的区别：此接口直接查询订单表，返回多条订单记录（带分页），
+     * 不关联快递轨迹，适合订单管理列表页。
+     *
+     * 示例请求：POST http://localhost:8005/findOrders
+     * 请求体：{ "order_id": "", "member_name": "张三", "pageNum": 1, "pageSize": 10 }
+     *
+     * @param userOrderInfoParamDTO 查询条件，可按 order_id、member_name 过滤，支持分页
+     * @return 包装了订单分页数据的统一响应体
+     */
+    @PostMapping("findOrders")
+    public Result<PageDTO> findOrders(@RequestBody UserOrderInfoParamDTO userOrderInfoParamDTO) {
+        return new ResultUtil<PageDTO>().setData(userOrderInfoService.findUserOrderInfos(userOrderInfoParamDTO));
+    }
+
+    /**
+     * 创建订单并同步创建快递单（Dubbo RPC 同步调用）
      *
      * 调用流程：
-     *   1. Dubbo RPC 调用 coffee-userorder，将订单写入 order 表，返回 orderId
-     *   2. Dubbo RPC 调用 coffee-expresstrack，同步创建快递单和初始轨迹（"商家已揽件"）
-     *
-     * 两步 RPC 均为同步调用，调用方等待两步都完成后才返回响应。
+     *   1. 接收前端传来的订单创建参数
+     *   2. Dubbo RPC 调用 coffee-userorder.createOrder()
+     *      → coffee-userorder 将订单写入 userordertest 数据库的 order 表，返回 order_id
+     *   3. Dubbo RPC 调用 coffee-expresstrack.createExpress(orderId)
+     *      → coffee-expresstrack 写入 express 表（快递单）和 track 表（"商家已揽件"初始轨迹）
+     *   4. 两个 RPC 调用都成功后，返回 order_id 给前端
      *
      * 示例请求：POST http://localhost:8005/createOrder
-     * 请求体：{ "order_id": "ORDER099", "OneID": "ONE001", "order_amount": 99.9 }
-     *
-     * @param userOrderCreateDTO 订单创建参数
-     * @return 创建成功的订单编号
+     * 请求体：{ "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
      */
     @PostMapping("createOrder")
     public Result<String> createOrder(@RequestBody UserOrderCreateDTO userOrderCreateDTO) {
-        // 第一步：Dubbo RPC 调用 coffee-userorder，将订单写入 order 表
-        String orderId = userOrderInfoService.createOrder(userOrderCreateDTO);
-
-        // 第二步：Dubbo RPC 调用 coffee-expresstrack，同步创建快递单和初始轨迹
-        // createExpress 内部完成两步写库：INSERT express + INSERT track（"商家已揽件"）
-        expressTrackInfoService.createExpress(orderId);
-
-        return new ResultUtil<String>().setData(orderId);
+        try {
+            String orderId = userOrderInfoService.createOrder(userOrderCreateDTO);
+            expressTrackInfoService.createExpress(orderId);
+            return new ResultUtil<String>().setData(orderId);
+        } catch (Exception e) {
+            Result<String> result = new Result<>();
+            result.setSuccess(false);
+            result.setCode(500);
+            // Dubbo 跨 RPC 异常：provider 的完整堆栈被序列化成字符串放在 message 里，
+            // getCause() 链在 consumer 侧已断，需从 message 字符串提取根因行。
+            Throwable root = e;
+            while (root.getCause() != null) root = root.getCause();
+            String msg = root.getMessage();
+            if (msg != null && msg.contains("### Cause:")) {
+                int idx = msg.lastIndexOf("### Cause:");
+                msg = msg.substring(idx + "### Cause:".length()).trim();
+                int nl = msg.indexOf('\n');
+                if (nl > 0) msg = msg.substring(0, nl).trim();
+            }
+            result.setMessage("创建订单失败：" + msg);
+            return result;
+        }
     }
 }
