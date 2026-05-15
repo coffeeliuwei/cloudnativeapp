@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <parent>
+        <artifactId>coffee-userorder</artifactId>
+        <groupId>com.coffee.yun</groupId>
+        <version>1.0-SNAPSHOT</version>
+    </parent>
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>coffee-userorder-api</artifactId>
+    <version>1.0-SNAPSHOT</version>
+
+    <properties>
+        <maven.compiler.source>17</maven.compiler.source>
+        <maven.compiler.target>17</maven.compiler.target>
+        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    </properties>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.coffee.yun</groupId>
+            <artifactId>coffee-common</artifactId>
+            <version>1.0-SNAPSHOT</version>
+        </dependency>
+        <!-- Lombok：coffee-common 中声明为 optional，不会传递，需在此显式引入 -->
+        <dependency>
+            <groupId>org.projectlombok</groupId>
+            <artifactId>lombok</artifactId>
+            <version>1.18.34</version>
+            <optional>true</optional>
+        </dependency>
+    </dependencies>
+
+    <distributionManagement>
+        <snapshotRepository>
+            <id>2643746-snapshot-a6HsOJ</id>
+            <name>云效 Snapshot 仓库</name>
+            <url>https://packages.aliyun.com/699e67ca9df7fdfa65468b27/maven/2643746-snapshot-a6hsoj</url>
+        </snapshotRepository>
+    </distributionManagement>
+
+</project>
