@@ -195,38 +195,33 @@ database:
 
 **场景二：本地 Nacos + 本地 MySQL（密码不是 123456）**
 
-只需要设数据库密码，其他保持默认。
+直接修改 `coffee-userorder/provider/src/main/resources/application-dev.yml` 里的默认值：
 
-在 **IDEA** 里：Run → Edit Configurations → 选中启动类 → **Environment Variables** 输入框：
-
+```yaml
+database:
+  user: ${DB_USER:你的MySQL用户名}      # ← 把 root 换成你的实际用户名
+  password: ${DB_PASSWORD:你的MySQL密码}  # ← 把 123456 换成你的实际密码
+  host: ${DB_HOST:localhost:3306}
+  dbname: ${DB_NAME:userordertest}
 ```
-DB_USER=你的用户名;DB_PASSWORD=你的密码
-```
 
-在**命令行**启动时用 `-D` 前缀：
-
-```bash
-java -DDB_USER=你的用户名 -DDB_PASSWORD=你的密码 -jar coffee-userorder-provider-1.0-SNAPSHOT.jar
-```
+`coffee-expresstrack` 同理，修改它自己的 `application-dev.yml`。改完在 IDEA 里直接右键 → Run 启动即可。
 
 ---
 
 **场景三：本地 Nacos + 阿里云 RDS**
 
-需要把数据库地址指向 RDS 外网地址：
+修改 `application-dev.yml`，把数据库地址指向 RDS 外网地址：
 
-IDEA Environment Variables：
-```
-DB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306;DB_USER=userordertest;DB_PASSWORD=你的RDS密码
+```yaml
+database:
+  user: ${DB_USER:userordertest}                              # ← RDS 用户名
+  password: ${DB_PASSWORD:你的RDS密码}                        # ← RDS 密码
+  host: ${DB_HOST:rm-xxx.mysql.rds.aliyuncs.com:3306}        # ← RDS 外网地址
+  dbname: ${DB_NAME:userordertest}
 ```
 
-命令行：
-```bash
-java -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 \
-     -DDB_USER=userordertest \
-     -DDB_PASSWORD=你的密码 \
-     -jar coffee-userorder-provider-1.0-SNAPSHOT.jar
-```
+改完直接在 IDEA 里右键 → Run 启动。
 
 ---
 
@@ -267,11 +262,9 @@ Nacos 由 EDAS Agent 自动接管，不需要设 `NACOS_ADDR` 和 `DUBBO_REGISTR
 
 ---
 
-> **推荐：IDEA 里统一管理环境变量**
+> **注意：改完 yml 默认值，不要把修改提交到 Git**
 >
-> `Run` → `Edit Configurations` → 点击左侧对应的启动配置 → 右侧找到 **Environment Variables** 一栏，点击右边的 `...` 图标可以逐条填写，比手动写分号分隔的字符串更直观。
->
-> 设置一次后 IDEA 会记住，下次直接运行不需要重设。
+> `application-dev.yml` 里包含你自己的密码和云上地址，提交后其他同学 clone 下来会连到你的资源。测试完成后用 `git checkout -- .` 还原文件，或在 IDEA 的 Git 面板右键 → Rollback 还原。
 
 ---
 
