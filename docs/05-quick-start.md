@@ -600,15 +600,30 @@ kill -9 <PID>
 | 55.0 | Java 11 |
 | 61.0 | Java 17 |
 
-如果提示"Runtime only recognizes class file versions up to 52.0"，说明当前运行环境是 Java 8。
+同一个问题有两种报错形式：
+
+| 报错信息 | 触发场景 | 含义 |
+|---------|---------|------|
+| `Runtime only recognizes class file versions up to 52.0` | 运行 jar 时 | 用 Java 8 运行了 Java 17 编译的程序 |
+| `无效的目标发行版: 17` | `mvn compile` 时 | 用 Java 8/11 的编译器编译要求 target=17 的代码 |
+
+两种报错的解决方法完全相同：把 `JAVA_HOME` 改成 JDK 17。
+
+**排查：** 先执行 `mvn -version`，输出中会显示 Maven 实际使用的 Java 路径：
+
+```
+Apache Maven 3.8.x ...
+Java version: 1.8.0_xxx  ← 这里如果不是 17，就是根因
+Java home: C:\Program Files\Java\jdk1.8.0_xxx
+```
 
 **解决方法：**
 1. 下载安装 JDK 17（推荐：[Adoptium Temurin 17](https://adoptium.net)）
 2. 将系统环境变量 `JAVA_HOME` 改为 JDK 17 的安装目录（如 `C:\Program Files\Java\jdk-17`），重开命令窗口后生效
-3. 验证：`java -version` 应显示 `17.x.x`
+3. 验证：`java -version` 和 `mvn -version` 显示的 Java 版本都应该是 17
 4. 重启 VS Code，按 `Ctrl+Shift+P` 输入 `Java: Configure Java Runtime`，切换到 Java 17
 
-> **Nacos 启动时报此错**：同样原因。在启动 Nacos 之前，确认命令窗口中 `java -version` 显示的是 17，而不是 8 或 11。如果系统装了多个 Java 版本，可在当前命令窗口临时设置：
+> **Nacos 启动时报此错**：同样原因。在启动 Nacos 之前，确认命令窗口中 `java -version` 显示的是 17。如果系统装了多个 Java 版本，可在当前命令窗口临时设置：
 > ```cmd
 > set JAVA_HOME=C:\Program Files\Java\jdk-17
 > startup.cmd -m standalone
