@@ -67,9 +67,10 @@ app-admin/
 │   │       └── user.js       用户状态（登录信息、token）
 │   ├── components/           公共 Vue 组件
 │   └── view/
-│       ├── login/login.vue   登录页
-│       ├── single-page/home/ 首页
-│       └── order/order.vue   订单查询页（核心业务页面）
+│       ├── login/login.vue        登录页（本地校验，无需后端接口）
+│       ├── single-page/home/      首页（静态图表）
+│       ├── order-manage/          订单管理页（查询订单列表、新建订单）
+│       └── order/order.vue        轨迹查询页（按订单号查快递轨迹）
 └── static/                   静态资源（图片、字体等）
 ```
 
@@ -143,11 +144,28 @@ export default [
         path: 'home',
         component: () => import('@/view/single-page/home/home.vue'),
         meta: { title: '首页', icon: 'md-home' }
-      },
+      }
+    ]
+  },
+  {
+    path: '/order-manage',        // 访问 /order-manage 时显示订单管理页
+    component: Main,
+    children: [
       {
-        path: 'order',            // 访问 /order 时显示订单页
+        path: '/order-manage',
+        component: () => import('@/view/order-manage/order-manage.vue'),
+        meta: { title: '订单管理', icon: 'md-cart' }  // 调用 POST /findOrders、POST /createOrder
+      }
+    ]
+  },
+  {
+    path: '/order',               // 访问 /order 时显示轨迹查询页
+    component: Main,
+    children: [
+      {
+        path: '/order',
         component: () => import('@/view/order/order.vue'),
-        meta: { title: '订单管理' }
+        meta: { title: '轨迹查询', icon: 'md-locate' }  // 调用 POST /findOrderList
       }
     ]
   }
@@ -160,30 +178,36 @@ export default [
 
 ### src/store/module/user.js — 用户状态管理
 
-Vuex 是 Vue 的官方状态管理方案，解决"多个组件需要共享同一份数据"的问题：
+Vuex 是 Vue 的官方状态管理方案，解决"多个组件需要共享同一份数据"的问题。
+
+**本项目的登录采用本地校验**：输入任意非空用户名和密码即可进入，无需后端 `/login` 接口。后端只负责业务接口（订单、快递），不提供认证服务。
 
 ```javascript
 export default {
   state: {
     userName: '',    // 当前登录用户名
-    token: ''        // 登录凭证（每次请求带上，后端验证身份）
-  },
-  mutations: {
-    // mutation 是修改 state 的唯一方式（保证状态变化可追踪）
-    setUser(state, user) {
-      state.userName = user.name
-      state.token = user.token
-    },
-    logout(state) {
-      state.userName = ''
-      state.token = ''
-    }
+    token: ''        // 本地生成的 token（'local-token-' + userName）
   },
   actions: {
-    // action 处理异步操作（比如网络请求），再提交 mutation
-    login({ commit }, { username, password }) {
-      return api.login(username, password).then(user => {
-        commit('setUser', user)    // 登录成功后更新 state
+    // 登录：本地校验，非空即通过，无需调后端
+    handleLogin({ commit }, { userName, password }) {
+      return new Promise((resolve, reject) => {
+        if (userName && password) {
+          commit('setToken', 'local-token-' + userName)
+          resolve()
+        } else {
+          reject(new Error('用户名或密码不能为空'))
+        }
+      })
+    },
+    // 用户信息：返回本地固定数据，无需调后端 /get_info
+    getUserInfo({ state, commit }) {
+      return new Promise((resolve) => {
+        const data = { name: state.token.replace('local-token-', ''), access: ['super_admin'] }
+        commit('setUserName', data.name)
+        commit('setAccess', data.access)
+        commit('setHasGetInfo', true)
+        resolve(data)
       })
     }
   }
@@ -195,18 +219,66 @@ export default {
 ```
 用户操作（如点击登录按钮）
     ↓ dispatch
-  actions（处理异步请求）
+  actions（处理逻辑，本项目为本地校验）
     ↓ commit
   mutations（同步修改 state）
     ↓
   state 更新 → 页面自动重新渲染
 ```
 
+> **教学说明：** 生产系统中登录应调用后端接口验证账号密码、颁发 JWT。本项目为了让学习者聚焦在微服务核心逻辑（Dubbo RPC、服务注册、数据库），将登录简化为本地校验。
+
 ---
 
-### src/view/order/order.vue — 订单查询页
+### src/view/order-manage/ — 订单管理页
 
-这是本项目最核心的业务页面，调用 `coffee-app` 的接口展示快递轨迹。组件逻辑抽离到 `order.js`，`order.vue` 只保留模板：
+调用 `POST /findOrders` 展示订单列表，并通过弹窗调用 `POST /createOrder` 新建订单。
+
+```javascript
+// order-manage.js（关键逻辑摘要）
+import { findOrders, createOrder } from '@/api/index'
+
+export default {
+  data() {
+    return {
+      searchForm: { pageNum: 1, pageSize: 10, order_id: '', member_name: '' },
+      columns: [
+        { title: '订单编号', key: 'order_id' },
+        { title: '会员姓名', key: 'member_name' },
+        { title: '手机号',   key: 'member_phone' },
+        { title: '订单状态', key: 'order_status' },
+        { title: '金额（元）', key: 'order_amount' }
+      ],
+      showCreate: false,   // 控制新建订单弹窗显示
+      createForm: { order_id: '', OneID: '', order_amount: '' }
+    }
+  },
+  methods: {
+    getOrders() {
+      findOrders(this.searchForm).then(res => {  // POST /findOrders
+        if (res.data.success) {
+          this.data = res.data.result.list
+          this.total = res.data.result.total
+        }
+      })
+    },
+    handleCreate() {
+      createOrder(this.createForm).then(res => { // POST /createOrder
+        if (res.data.success) {
+          this.showCreate = false
+          this.getOrders()   // 创建成功后刷新列表
+        }
+      })
+    }
+  }
+}
+```
+
+---
+
+### src/view/order/order.vue — 轨迹查询页
+
+调用 `POST /findOrderList` 展示快递轨迹，支持按订单号过滤。组件逻辑抽离到 `order.js`，`order.vue` 只保留模板：
 
 ```vue
 <!-- order.vue：只负责 HTML 结构，逻辑在 order.js -->
