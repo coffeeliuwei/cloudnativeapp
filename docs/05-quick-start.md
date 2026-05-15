@@ -230,7 +230,30 @@ java -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 \
 
 ---
 
-**场景四：部署到 EDAS（云上完整部署）**
+**场景四：本地运行 + 云上 MSE Nacos + 阿里云 RDS**
+
+代码还跑在自己电脑上，但注册中心和数据库都指向云上。需要同时设 Nacos 和数据库的变量：
+
+IDEA Environment Variables：
+```
+NACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848;DUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848;DB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306;DB_USER=userordertest;DB_PASSWORD=你的密码
+```
+
+命令行：
+```bash
+java -DNACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848 \
+     -DDUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848 \
+     -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 \
+     -DDB_USER=userordertest \
+     -DDB_PASSWORD=你的密码 \
+     -jar coffee-userorder-provider-1.0-SNAPSHOT.jar
+```
+
+> `NACOS_ADDR` 和 `DUBBO_REGISTRY` 都要设，前者控制配置中心连接，后者控制 Dubbo 服务注册地址，两个地址相同但格式不同（一个不带协议头，一个带 `nacos://`）。
+
+---
+
+**场景五：部署到 EDAS（云上完整部署）**
 
 在 EDAS 控制台创建/部署应用时，找到 **JVM 参数**输入框，填入：
 
