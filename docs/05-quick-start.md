@@ -205,8 +205,10 @@ SELECT * FROM track;     -- 应该看到 2 条轨迹数据
 
 **在 VS Code 的终端中执行（菜单 `终端` → `新建终端`，或快捷键 `Ctrl+\``）：**
 
+> **必须用 `mvn`，不要用 `mvnw`！** 项目目录下有 `mvnw` 脚本（Maven Wrapper），VS Code 有时会自动调用它。`mvnw` 启动时会去网络下载 `maven-wrapper.jar`，国内网络经常失败，报 `MavenWrapperMain` 找不到的错误。直接在终端手动输入 `mvn` 命令可以绕过这个问题。
+
 ```bash
-# 进入项目根目录
+# 进入项目根目录（VS Code 终端默认已在项目根目录，可跳过这行）
 cd D:\你的路径\cloudnativeapp
 
 # 第一步：安装公共库（其他所有模块都依赖它，必须最先安装）
@@ -689,7 +691,21 @@ npm install
 
 ---
 
-### 错误9：前端启动后查询无数据或报网络错误
+### 错误9：`找不到或无法加载主类 MavenWrapperMain` / `WebClient 请求期间发生异常`
+
+**含义**：使用了 `mvnw`（Maven Wrapper）而非 `mvn`，Wrapper 尝试从网络下载 `maven-wrapper.jar` 失败。国内访问 `repo.maven.apache.org` 经常超时。
+
+**解决方法：** 不要用 `mvnw`，直接在终端输入 `mvn` 命令：
+
+```cmd
+mvn clean install -DskipTests
+```
+
+VS Code 右键菜单触发的 Maven 操作可能默认调用 `mvnw`，遇到此错误时改用终端手动输入 `mvn`。
+
+---
+
+### 错误10：前端启动后查询无数据或报网络错误
 
 **排查步骤：**
 1. 先在浏览器访问 `http://localhost:8005/hello/ORDER001`，确认后端接口本身正常
