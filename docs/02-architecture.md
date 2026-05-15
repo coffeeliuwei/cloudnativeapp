@@ -447,64 +447,107 @@ Spring Cloud 在 Nacos 配置变更时：
 
 ## 7. 请求完整调用链路
 
-以用户查询 `ORDER001` 的快递轨迹为例：
+本项目前端有两个业务页面，对应不同的调用链路。
+
+---
+
+### 7.1 轨迹查询（POST /findOrderList）
+
+前端"轨迹查询"页用户输入订单号，直接查询快递轨迹：
 
 ```
-① 用户在浏览器 app-admin 中输入 ORDER001，点击查询按钮
+① 用户在"轨迹查询"页输入 ORDER001，点击搜索
 
 ② app-admin（Vue）通过 Axios 发送：
-   GET http://localhost:8005/hello/ORDER001
+   POST http://localhost:8005/findOrderList
+   Body: { "order_id": "ORDER001", "pageNum": 1, "pageSize": 10 }
 
 ③ coffee-app/CoffeeController 接收请求：
-   @GetMapping("/hello/{orderid}")
-   public PageDTO<ExpressTrackInfoResultDTO> helloCoffee(@PathVariable String orderid)
-
-④ CoffeeController 构造参数，发起第一次 Dubbo RPC 调用：
-   UserOrderInfoParamDTO param = new UserOrderInfoParamDTO();
+   @PostMapping("findOrderList")
+   // 直接构造快递轨迹查询参数（不经过订单服务中转）
+   ExpressTrackInfoParamDTO param = new ExpressTrackInfoParamDTO();
    param.setOrder_id("ORDER001");
-   UserOrderInfoResultDTO orderResult = userOrderInfoService.findUserOrderInfo(param);
-   // 这行代码走的是 Dubbo RPC，不是本地调用
 
-⑤ Dubbo 框架：
-   → 从 Nacos 得到 coffee-userorder 地址：127.0.0.1:7001（Dubbo端口）
-   → 序列化参数（fastjson2）
-   → 通过 TCP 发送到 coffee-userorder
-
-⑥ coffee-userorder/UserOrderInfoServiceImpl 执行：
-   → PageHelper 拦截，准备分页 SQL
-   → MyBatis 执行：
-     SELECT m.member_name, o.order_id, o.order_amount, o.order_status
-     FROM member m, `order` o
-     WHERE m.OneID = o.OneID AND o.order_id = 'ORDER001'
-   → 查询 userordertest 数据库（本地或 RDS）
-   → 返回 UserOrderInfoResultDTO（含 order_id = 'ORDER001'）
-
-⑦ coffee-app 拿到 order_id，构造第二次 Dubbo RPC 调用：
-   ExpressTrackInfoParamDTO etParam = new ExpressTrackInfoParamDTO();
-   etParam.setOrder_id("ORDER001");
-   PageDTO<ExpressTrackInfoResultDTO> result =
-       expressTrackInfoService.findExpressTrackInfos(etParam);
-
-⑧ Dubbo 框架：
+④ Dubbo RPC 调用 coffee-expresstrack：
    → 从 Nacos 得到 coffee-expresstrack 地址：127.0.0.1:28888
-   → 序列化参数，通过 TCP 发送到 coffee-expresstrack
+   → 序列化参数，通过 TCP 发送
 
-⑨ coffee-expresstrack/ExpresstrackInfoServiceImpl 执行：
+⑤ coffee-expresstrack/ExpresstrackInfoServiceImpl 执行：
    → MyBatis 执行：
      SELECT express.express_id, order_id, express_weight, track_id, track_show
      FROM `express`
      LEFT JOIN `track` ON `express`.`express_id` = `track`.`express_id`
-     WHERE order_id = 'ORDER001'
+     WHERE order_id = 'ORDER001'   ← order_id 为空时不加此条件，返回全部
    → 查询 expresstracktest 数据库
-   → 返回 PageDTO（含5条轨迹记录，total=5）
+   → 返回 PageDTO（含轨迹记录）
 
-⑩ coffee-app 将 PageDTO 直接作为 HTTP 响应体返回
-   → Spring Boot 自动将 PageDTO 序列化为 JSON
-
-⑪ app-admin 的 Axios 收到 JSON 响应
-   → Vue 更新 trackList 数据
-   → Table 组件自动重新渲染，用户看到5条轨迹记录
+⑥ coffee-app 将结果包装为 Result<PageDTO> 返回
+   → app-admin 的 Table 组件自动重新渲染，用户看到轨迹列表
 ```
+
+---
+
+### 7.2 订单管理（POST /findOrders）
+
+前端"订单管理"页展示订单列表，直接查询订单服务：
+
+```
+① 用户进入"订单管理"页（或点击搜索）
+
+② app-admin（Vue）通过 Axios 发送：
+   POST http://localhost:8005/findOrders
+   Body: { "pageNum": 1, "pageSize": 10, "member_name": "张三" }
+
+③ coffee-app/CoffeeController 接收请求：
+   @PostMapping("findOrders")
+
+④ Dubbo RPC 调用 coffee-userorder：
+   → 从 Nacos 得到 coffee-userorder 地址：127.0.0.1:7001（Dubbo端口）
+   → 序列化参数，通过 TCP 发送
+
+⑤ coffee-userorder/UserOrderInfoServiceImpl 执行：
+   → PageHelper 拦截，准备分页 SQL
+   → MyBatis 执行：
+     SELECT m.member_name, m.member_phone, o.order_id, o.order_amount, o.order_status
+     FROM member m, `order` o
+     WHERE m.OneID = o.OneID
+     AND m.member_name = '张三'   ← 有条件时才加，空值不过滤
+   → 查询 userordertest 数据库
+   → 返回 PageDTO（含订单列表）
+
+⑥ coffee-app 将结果包装为 Result<PageDTO> 返回
+   → app-admin 的订单表格自动刷新
+```
+
+---
+
+### 7.3 创建订单（POST /createOrder）
+
+前端"订单管理"页点击"新建订单"，串行调用两个微服务：
+
+```
+① 用户在弹窗填写 order_id / OneID / order_amount，点击确认
+
+② app-admin 发送：
+   POST http://localhost:8005/createOrder
+   Body: { "order_id": "ORDER100", "OneID": "U001", "order_amount": 199.0 }
+
+③ coffee-app 串行编排两次 Dubbo RPC：
+
+   第一次 RPC → coffee-userorder：
+   → 将订单写入 userordertest.order 表
+   → 返回 orderId = "ORDER100"
+
+   第二次 RPC → coffee-expresstrack：
+   → 写入 expresstracktest.express 表（快递单）
+   → 写入 expresstracktest.track 表（"商家已揽件"初始轨迹）
+
+④ 两次 RPC 均成功后，返回 orderId 给前端
+   → 前端关闭弹窗，刷新订单列表
+   → 此时在"轨迹查询"页输入 ORDER100 即可看到"商家已揽件"
+```
+
+> **设计说明：** 两次 RPC 由 coffee-app 串行编排（非分布式事务），若第二次失败会返回错误信息。适合教学演示：调用链路完全可见，不引入 Seata 等分布式事务框架。
 
 ---
 
