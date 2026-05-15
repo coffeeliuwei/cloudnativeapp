@@ -1,8 +1,19 @@
-# 生产环境配置（EDAS 部署时加载）
-# Dubbo 注册中心由 EDAS Pandora Agent 自动接管，无需在此配置
+# 生产环境配置（云上部署，ENV=prod 时加载）
+# 所有默认值均指向云上服务；通过环境变量可覆盖为其他地址
+
+dubbo:
+  registry:
+    # MSE Nacos 服务注册中心（公网或 VPC 内网地址）
+    # 替换为控制台"服务发现 > 实例详情"中的接入地址
+    address: ${DUBBO_REGISTRY:nacos://mse-xxxxxxxx-p.nacos.mse.aliyuncs.com:8848}
+
+# Nacos 配置中心地址（在 application.yml 的 spring.config.import 中通过 ${NACOS_ADDR} 引用）
+# 替换为控制台"配置管理 > 实例详情"中的接入地址（与注册中心通常为同一实例）
+# 部署时设置环境变量：NACOS_ADDR=mse-xxxxxxxx-p.nacos.mse.aliyuncs.com:8848
 
 database:
+  # RDS MySQL 连接信息，替换为控制台"数据库连接 > 内网地址"
   user: ${DB_USER:expresstracktest}
   password: ${DB_PASSWORD:Expresstracktest123}
-  host: ${DB_HOST:rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com:3306}
+  host: ${DB_HOST:rm-xxxxxxxxxxxxxxxxx.mysql.rds.aliyuncs.com:3306}
   dbname: ${DB_NAME:expresstracktest}
