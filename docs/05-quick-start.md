@@ -232,24 +232,38 @@ java -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 \
 
 **场景四：本地运行 + 云上 MSE Nacos + 阿里云 RDS**
 
-代码还跑在自己电脑上，但注册中心和数据库都指向云上。需要同时设 Nacos 和数据库的变量：
+代码还跑在自己电脑上，但注册中心和数据库都指向云上。
 
-IDEA Environment Variables：
-```
-NACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848;DUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848;DB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306;DB_USER=userordertest;DB_PASSWORD=你的密码
+**最简单的方式：直接改 `application-dev.yml` 的默认值**
+
+`${VAR:默认值}` 里冒号后面就是默认值，把它换成你的实际地址，不需要设任何环境变量，直接在 IDEA 里点运行即可。
+
+`coffee-userorder/provider/src/main/resources/application-dev.yml`：
+
+```yaml
+dubbo:
+  registry:
+    address: ${DUBBO_REGISTRY:nacos://mse-xxx.nacos.aliyuncs.com:8848}  # ← 换成你的 MSE 地址
+
+database:
+  user: ${DB_USER:userordertest}          # ← 换成你的 RDS 用户名
+  password: ${DB_PASSWORD:你的RDS密码}    # ← 换成你的 RDS 密码
+  host: ${DB_HOST:rm-xxx.mysql.rds.aliyuncs.com:3306}  # ← 换成你的 RDS 外网地址
+  dbname: ${DB_NAME:userordertest}
 ```
 
-命令行：
-```bash
-java -DNACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848 \
-     -DDUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848 \
-     -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 \
-     -DDB_USER=userordertest \
-     -DDB_PASSWORD=你的密码 \
-     -jar coffee-userorder-provider-1.0-SNAPSHOT.jar
+`application.yml` 里的 Nacos 配置中心地址同样修改：
+
+```yaml
+spring:
+  config:
+    import: "optional:nacos:coffee-userorder.properties?server-addr=${NACOS_ADDR:mse-xxx.nacos.aliyuncs.com:8848}&refreshEnabled=true"
+    #                                                                               ↑ 换成你的 MSE 地址
 ```
 
-> `NACOS_ADDR` 和 `DUBBO_REGISTRY` 都要设，前者控制配置中心连接，后者控制 Dubbo 服务注册地址，两个地址相同但格式不同（一个不带协议头，一个带 `nacos://`）。
+改完直接在 IDEA 里右键 → Run，无需任何命令行参数。
+
+> **注意：** 直接改默认值的方式要小心别把修改提交到 Git，否则其他同学 clone 下来会连到你的云上资源。建议改完测试后用 `git checkout -- .` 还原，或者养成习惯用 IDEA Environment Variables 方式替代。
 
 ---
 
