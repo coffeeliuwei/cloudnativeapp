@@ -538,12 +538,29 @@ kill -9 <PID>
 
 ### 错误0：`UnsupportedClassVersionError` 或 `class file has wrong version`
 
-**含义**：Java 版本不够，需要 Java 17+。
+**含义**：启动程序所用的 Java 版本太低。**Nacos 2.3.x 和本项目微服务均需要 Java 17+**，用 Java 8 或 Java 11 启动都会报这个错。
+
+错误信息中 `class file version` 后面的数字对应关系：
+
+| class file version | 对应 Java 版本 |
+|--------------------|--------------|
+| 52.0 | Java 8 |
+| 55.0 | Java 11 |
+| 61.0 | Java 17 |
+
+如果提示"Runtime only recognizes class file versions up to 52.0"，说明当前运行环境是 Java 8。
 
 **解决方法：**
 1. 下载安装 JDK 17（推荐：[Adoptium Temurin 17](https://adoptium.net)）
-2. 设置 `JAVA_HOME` 环境变量指向 JDK 17 目录
-3. 重启 VS Code，按 `Ctrl+Shift+P` 输入 `Java: Configure Java Runtime`，切换到 Java 17
+2. 将系统环境变量 `JAVA_HOME` 改为 JDK 17 的安装目录（如 `C:\Program Files\Java\jdk-17`），重开命令窗口后生效
+3. 验证：`java -version` 应显示 `17.x.x`
+4. 重启 VS Code，按 `Ctrl+Shift+P` 输入 `Java: Configure Java Runtime`，切换到 Java 17
+
+> **Nacos 启动时报此错**：同样原因。在启动 Nacos 之前，确认命令窗口中 `java -version` 显示的是 17，而不是 8 或 11。如果系统装了多个 Java 版本，可在当前命令窗口临时设置：
+> ```cmd
+> set JAVA_HOME=C:\Program Files\Java\jdk-17
+> startup.cmd -m standalone
+> ```
 
 ---
 
