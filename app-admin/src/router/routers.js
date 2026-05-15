@@ -51,21 +51,36 @@ export default [
     ]
   },
   {
-    path: '/order', // 必填    指定链接
-    name: '订单轨迹查询', // 必填    组件名称，页面都以name值来加载
-    component: Main, // 注入组件
-    meta: {
-      hideInBread: true
-    },
-    children: [ // 在main右侧视图显示的页面都要用children来添加
+    path: '/order-manage',
+    name: '_order_manage',
+    component: Main,
+    meta: { hideInBread: true },
+    children: [
       {
-        path: '/order', // 必填
-        name: '订单查询', // 必填
+        path: '/order-manage',
+        name: 'order_manage',
         meta: {
           title: '订单管理',
           icon: 'md-cart'
         },
-        component: () => import('@/view/order/order.vue') // 必填   用来加载该路由规则对应的视图
+        component: () => import('@/view/order-manage/order-manage.vue')
+      }
+    ]
+  },
+  {
+    path: '/order',
+    name: '_order_track',
+    component: Main,
+    meta: { hideInBread: true },
+    children: [
+      {
+        path: '/order',
+        name: 'order_track',
+        meta: {
+          title: '轨迹查询',
+          icon: 'md-locate'
+        },
+        component: () => import('@/view/order/order.vue')
       }
     ]
   }

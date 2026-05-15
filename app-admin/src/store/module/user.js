@@ -1,13 +1,8 @@
 import {
-  login,
-  logout,
-  getUserInfo,
-  getMessage,
   getContentByMsgId,
   hasRead,
   removeReaded,
-  restoreTrash,
-  getUnreadCount
+  restoreTrash
 } from '@/api/user'
 import { setToken, getToken } from '@/libs/util'
 
@@ -73,83 +68,54 @@ export default {
     messageTrashCount: state => state.messageTrashList.length
   },
   actions: {
-    // 登录
+    // 登录：本地校验，无需后端 /login 接口（后端只提供业务接口）
     handleLogin ({ commit }, { userName, password }) {
       userName = userName.trim()
       return new Promise((resolve, reject) => {
-        login({
-          userName,
-          password
-        }).then(res => {
-          const data = res.data
-          commit('setToken', data.token)
+        if (userName && password) {
+          commit('setToken', 'local-token-' + userName)
           resolve()
-        }).catch(err => {
-          reject(err)
-        })
-      })
-    },
-    // 退出登录
-    handleLogOut ({ state, commit }) {
-      return new Promise((resolve, reject) => {
-        logout(state.token).then(() => {
-          commit('setToken', '')
-          commit('setAccess', [])
-          resolve()
-        }).catch(err => {
-          reject(err)
-        })
-        // 如果你的退出登录无需请求接口，则可以直接使用下面三行代码而无需使用logout调用接口
-        // commit('setToken', '')
-        // commit('setAccess', [])
-        // resolve()
-      })
-    },
-    // 获取用户相关信息
-    getUserInfo ({ state, commit }) {
-      return new Promise((resolve, reject) => {
-        try {
-          getUserInfo(state.token).then(res => {
-            const data = res.data
-            commit('setAvatar', data.avatar)
-            commit('setUserName', data.name)
-            commit('setUserId', data.user_id)
-            commit('setAccess', data.access)
-            commit('setHasGetInfo', true)
-            resolve(data)
-          }).catch(err => {
-            reject(err)
-          })
-        } catch (error) {
-          reject(error)
+        } else {
+          reject(new Error('用户名或密码不能为空'))
         }
       })
     },
-    // 此方法用来获取未读消息条数，接口只返回数值，不返回消息列表
-    getUnreadMessageCount ({ state, commit }) {
-      getUnreadCount().then(res => {
-        const { data } = res
-        commit('setMessageCount', data)
+    // 退出登录：本地清除，无需请求接口
+    handleLogOut ({ state, commit }) {
+      return new Promise((resolve) => {
+        commit('setToken', '')
+        commit('setAccess', [])
+        resolve()
       })
     },
-    // 获取消息列表，其中包含未读、已读、回收站三个列表
+    // 获取用户信息：返回本地固定数据，无需后端 /get_info 接口
+    getUserInfo ({ state, commit }) {
+      return new Promise((resolve) => {
+        const data = {
+          name: state.token ? state.token.replace('local-token-', '') : 'admin',
+          user_id: '1',
+          avatar: '',
+          access: ['super_admin', 'admin']
+        }
+        commit('setAvatar', data.avatar)
+        commit('setUserName', data.name)
+        commit('setUserId', data.user_id)
+        commit('setAccess', data.access)
+        commit('setHasGetInfo', true)
+        resolve(data)
+      })
+    },
+    // 未读消息数：固定返回 0，无需后端接口
+    getUnreadMessageCount ({ state, commit }) {
+      commit('setMessageCount', 0)
+    },
+    // 获取消息列表：固定返回空列表，无需后端接口
     getMessageList ({ state, commit }) {
-      return new Promise((resolve, reject) => {
-        getMessage().then(res => {
-          const { unread, readed, trash } = res.data
-          commit('setMessageUnreadList', unread.sort((a, b) => new Date(b.create_time) - new Date(a.create_time)))
-          commit('setMessageReadedList', readed.map(_ => {
-            _.loading = false
-            return _
-          }).sort((a, b) => new Date(b.create_time) - new Date(a.create_time)))
-          commit('setMessageTrashList', trash.map(_ => {
-            _.loading = false
-            return _
-          }).sort((a, b) => new Date(b.create_time) - new Date(a.create_time)))
-          resolve()
-        }).catch(error => {
-          reject(error)
-        })
+      return new Promise((resolve) => {
+        commit('setMessageUnreadList', [])
+        commit('setMessageReadedList', [])
+        commit('setMessageTrashList', [])
+        resolve()
       })
     },
     // 根据当前点击的消息的id获取内容
