@@ -16,6 +16,18 @@ node -v          # 应显示 v16.x 或更高
 
 如果有任何一项没有输出，请先参考 [环境搭建指南](../README.md) 完成安装。
 
+**确认本机 MySQL 连接参数（必须提前记下来）：**
+
+本项目需要连接本地 MySQL，启动前请确认以下三项，后续配置时会用到：
+
+| 参数 | 说明 | 常见默认值 |
+|------|------|---------|
+| 端口 | MySQL 监听端口 | **3306**（绝大多数安装默认值）|
+| 用户名 | 数据库账号 | `root` |
+| 密码 | 该账号的密码 | 安装时自己设置，没有统一默认值 |
+
+> **端口确认方法：** 打开 MySQL Workbench 或 Navicat，查看已有连接的端口号；或在命令行执行 `mysql -u root -p` 不指定端口，能连上说明是默认 3306。
+
 > **Java 版本注意**：本项目要求 Java 17+。如果你的系统安装了多个 Java 版本，请确认 `JAVA_HOME` 环境变量指向 Java 17 的安装目录。
 
 ---
@@ -182,7 +194,7 @@ mvn clean install -DskipTests
 database:
   user: ${DB_USER:root}
   password: ${DB_PASSWORD:123456}
-  host: ${DB_HOST:localhost:3307}
+  host: ${DB_HOST:localhost:3306}
   dbname: ${DB_NAME:userordertest}
 ```
 
@@ -198,7 +210,7 @@ database:
 |--------|------|-----------|------------|
 | `DB_USER` | 数据库用户名 | `root` | 本地 MySQL 用户名不是 root 时 |
 | `DB_PASSWORD` | 数据库密码 | `123456` | 本地 MySQL 密码不是 123456 时 |
-| `DB_HOST` | 数据库地址和端口 | `localhost:3307` | 连阿里云 RDS 时 |
+| `DB_HOST` | 数据库地址和端口 | `localhost:3306` | 本机端口不是 3306，或连阿里云 RDS 时 |
 | `DB_NAME` | 数据库名 | `userordertest` / `expresstracktest` | 一般不需要改 |
 | `NACOS_ADDR` | Nacos 配置中心地址 | `127.0.0.1:8848` | 连云上 MSE Nacos 时 |
 | `DUBBO_REGISTRY` | Dubbo 注册中心地址 | `nacos://127.0.0.1:8848` | 连云上 MSE Nacos 时 |
@@ -208,9 +220,9 @@ database:
 
 ### 四种场景，该怎么做
 
-**场景一：本地 Nacos + 本地 MySQL（默认密码 root/123456）**
+**场景一：本地 Nacos + 本地 MySQL**
 
-什么都不用设，直接启动。所有变量都有默认值，自动使用本地配置。
+> **先对照前置准备清单确认你的 MySQL 连接参数。** 配置文件默认值为：用户名 `root`、密码 `123456`、端口 `3306`。**只有这三项与你本机完全一致时**，才能直接启动，否则请看场景二。
 
 ---
 
@@ -222,9 +234,9 @@ database:
 
 ```yaml
 database:
-  user: ${DB_USER:你的MySQL用户名}        # ← 把 root 换成你的实际用户名
-  password: ${DB_PASSWORD:你的MySQL密码}  # ← 把 123456 换成你的实际密码
-  host: ${DB_HOST:localhost:3306}
+  user: ${DB_USER:你的MySQL用户名}          # ← 换成你的实际用户名（通常是 root）
+  password: ${DB_PASSWORD:你的MySQL密码}   # ← 换成你安装 MySQL 时设置的密码
+  host: ${DB_HOST:localhost:3306}          # ← 端口默认 3306，如不同请修改
   dbname: ${DB_NAME:userordertest}
 ```
 
