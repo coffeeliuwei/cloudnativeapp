@@ -84,14 +84,12 @@ public class CoffeeController {
      */
     @PostMapping("findOrderList")
     public Result<PageDTO> findOrderList(@RequestBody UserOrderInfoParamDTO userOrderInfoParamDTO) {
-        // 第一步：Dubbo RPC 调用订单服务，获取订单详情
-        UserOrderInfoResultDTO userOrderInfoResultDTO = userOrderInfoService.findUserOrderInfo(userOrderInfoParamDTO);
-
-        // 第二步：用订单中的 order_id 查询快递轨迹
+        // 直接按 order_id 分页查询快递轨迹，order_id 为空时返回全部记录。
+        // 不再经过订单服务中转，避免空 order_id 时 selectOne 返回 null 导致 NPE。
         ExpressTrackInfoParamDTO expressTrackInfoParamDTO = new ExpressTrackInfoParamDTO();
-        expressTrackInfoParamDTO.setOrder_id(userOrderInfoResultDTO.getOrder_id());
-
-        // 用 ResultUtil 包装返回结果，自动设置 success=true, code=200
+        expressTrackInfoParamDTO.setOrder_id(userOrderInfoParamDTO.getOrder_id());
+        expressTrackInfoParamDTO.setPageNum(userOrderInfoParamDTO.getPageNum());
+        expressTrackInfoParamDTO.setPageSize(userOrderInfoParamDTO.getPageSize());
         return new ResultUtil<PageDTO>().setData(expressTrackInfoService.findExpressTrackInfos(expressTrackInfoParamDTO));
     }
 
