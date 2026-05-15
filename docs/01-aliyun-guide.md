@@ -395,7 +395,7 @@ set ALIYUN_ACCESS_KEY_SECRET=your_key_secret
 变量名：ALIYUN_ACCESS_KEY_ID
 变量值：你的 AccessKey ID
 ```
-（设置后重启 IDEA 才能读取新环境变量）
+（设置后重启 VS Code 才能读取新环境变量）
 
 **Linux/macOS 设置：**
 ```bash
@@ -438,7 +438,7 @@ level: ERROR | SELECT * ORDER BY __time__ DESC LIMIT 100
 如果日志没有出现在 SLS 控制台，按以下顺序排查：
 
 1. **检查 Endpoint 是否与 Project 地域一致** — 这是最常见的错误
-2. **检查环境变量是否正确设置** — 在 IDEA Terminal 里执行 `echo %ALIYUN_ACCESS_KEY_ID%`（Windows）或 `echo $ALIYUN_ACCESS_KEY_ID`（Linux），确认有值
+2. **检查环境变量是否正确设置** — 在 VS Code 终端（`Ctrl+\``）里执行 `echo %ALIYUN_ACCESS_KEY_ID%`（Windows）或 `echo $ALIYUN_ACCESS_KEY_ID`（Linux），确认有值
 3. **检查 RAM 权限** — 子账号必须有 `AliyunLogFullAccess` 权限
 4. **检查网络** — 本地开发时需要能访问公网；阿里云 ECS 上建议用内网 Endpoint（格式：`cn-beijing-intranet.log.aliyuncs.com`）
 5. **查看 logback 自身的日志** — SLS Appender 推送失败时会在本地控制台打印警告，但不会抛出异常（静默失败是设计行为）

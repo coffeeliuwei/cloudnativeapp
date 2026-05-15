@@ -20,43 +20,44 @@ node -v          # 应显示 v16.x 或更高
 
 ---
 
-## IDEA 首次配置（必做，否则后续步骤会报错）
+## VS Code 首次配置（必做，否则后续步骤会报错）
 
-打开 IntelliJ IDEA，**在导入项目之前**先完成以下设置，避免后续出现莫名其妙的编译错误。
+打开 VS Code，**在导入项目之前**先完成以下设置，避免后续出现莫名其妙的编译错误。
+
+### 安装必要插件
+
+按 `Ctrl+Shift+X` 打开扩展面板，搜索并安装以下插件包：
+
+- **Extension Pack for Java**（微软官方，包含 Java 语言支持、调试器、Maven、测试等）
+- **Spring Boot Extension Pack**（包含 Spring Boot Dashboard，可统一管理所有 Spring Boot 服务）
+
+> 安装完成后重启 VS Code，等待右下角 Java 插件初始化完成（首次可能需要 1-2 分钟）。
 
 ### 确认 JDK 版本
 
-`File` → `Project Structure`（快捷键 `Ctrl+Alt+Shift+S`）→ `SDKs`
+按 `Ctrl+Shift+P` 打开命令面板，输入并选择 **`Java: Configure Java Runtime`**：
 
-- 如果列表里有 Java 17，选中它
-- 如果没有，点击 `+` → `Add JDK` → 选择 JDK 17 的安装目录
-
-然后在 `Project` 选项卡中，将 `SDK` 和 `Language level` 都设为 **17**。
+- 如果已显示 Java 17，无需额外操作
+- 如果没有，点击页面内的"Install JDK"按钮，或手动指定 JDK 17 安装目录
 
 ### 确认 Maven 设置
 
-`File` → `Settings` → `Build, Execution, Deployment` → `Build Tools` → `Maven`
+按 `Ctrl+,` 打开设置，搜索 `maven`：
 
-- `Maven home path`：指向你安装的 Maven 目录（如 `D:\tools\apache-maven-3.8.8`）
-- `User settings file`：默认 `~/.m2/settings.xml`（如果你配置了阿里云镜像，确认路径正确）
-- `Local repository`：Maven 本地缓存目录，默认 `~/.m2/repository`
+- `Maven › Executable: Path`：填写 Maven 的 `mvn` 可执行文件路径（如 `D:\tools\apache-maven-3.8.8\bin\mvn`）
+- `Maven › Global Settings`：如果你配置了阿里云镜像，填写 `settings.xml` 路径（如 `D:\tools\apache-maven-3.8.8\conf\settings.xml`）
 
 ### 设置文件编码为 UTF-8
 
-`File` → `Settings` → `Editor` → `File Encodings`
-
-- `Global Encoding`：UTF-8
-- `Project Encoding`：UTF-8
-- `Default encoding for properties files`：UTF-8
-- 勾选 `Transparent native-to-ascii conversion`
+按 `Ctrl+,` 打开设置，搜索 `encoding`，将 **`Files: Encoding`** 设为 `utf8`。
 
 > **为什么要设置编码？** 项目中有中文注释和中文测试数据。如果编码设置错误，中文会显示乱码，或者 `.properties` 文件中的中文配置项无法读取。
 
 ### 打开项目
 
-`File` → `Open` → 选择 `cloudnativeapp` 文件夹（选根目录，不是某个子模块）
+`文件` → `打开文件夹`（快捷键 `Ctrl+K Ctrl+O`）→ 选择 `cloudnativeapp` 根目录（不是某个子模块）
 
-IDEA 会自动识别 Maven 多模块项目，右下角会出现进度条，等待依赖加载完成（首次可能需要几分钟）。如果弹出"Trust and Open Maven Project"提示，点击 **Trust Project**。
+VS Code 会自动识别 Maven 多模块项目，右下角会出现 Java 项目加载进度，等待完成（首次可能需要几分钟）。
 
 ---
 
@@ -140,7 +141,7 @@ SELECT * FROM track;     -- 应该看到 8 条轨迹数据
 
 `coffee-app` 依赖 `coffee-userorder-api` 和 `coffee-expresstrack-api`，这两个 api 模块又依赖 `coffee-common`。Maven 只会从本地仓库或远程仓库找依赖。由于这些是本项目内部模块，没有发布到 Maven Central，所以必须先 `install` 到本地仓库，后续模块才能找到它们。
 
-**在 IDEA 的 Terminal 中执行（或打开系统命令提示符）：**
+**在 VS Code 的终端中执行（菜单 `终端` → `新建终端`，或快捷键 `Ctrl+\``）：**
 
 ```bash
 # 进入项目根目录
@@ -217,7 +218,7 @@ database:
 
 **方式一（推荐）：直接修改 yml 默认值**
 
-打开 `coffee-userorder/provider/src/main/resources/application-dev.yml`，把冒号后面的默认值换成你的实际值，IDEA 右键 → Run 直接启动：
+打开 `coffee-userorder/provider/src/main/resources/application-dev.yml`，把冒号后面的默认值换成你的实际值，保存后在 VS Code 中直接启动：
 
 ```yaml
 database:
@@ -230,13 +231,26 @@ database:
 `coffee-expresstrack` 同理，修改它自己的 `application-dev.yml`。
 
 <details>
-<summary>方式二（进阶）：通过 IDEA 环境变量注入，不改文件</summary>
+<summary>方式二（进阶）：通过 VS Code launch.json 注入环境变量，不改文件</summary>
 
-`Run` → `Edit Configurations` → 选中启动类 → **Environment Variables**：
+在项目根目录创建 `.vscode/launch.json`，添加如下配置：
+```json
+{
+  "configurations": [
+    {
+      "type": "java",
+      "name": "UserOrderApplication",
+      "request": "launch",
+      "mainClass": "com.coffee.yun.userorder.UserOrderApplication",
+      "env": {
+        "DB_USER": "你的用户名",
+        "DB_PASSWORD": "你的密码"
+      }
+    }
+  ]
+}
 ```
-DB_USER=你的用户名;DB_PASSWORD=你的密码
-```
-优点：文件保持原样，不用担心误提交到 Git。
+保存后在 VS Code 左侧"运行和调试"面板（`Ctrl+Shift+D`）选择该配置启动。优点：文件保持原样，不用担心误提交到 Git（`.vscode/launch.json` 已在 `.gitignore` 中）。
 </details>
 
 ---
@@ -256,11 +270,15 @@ database:
 ```
 
 <details>
-<summary>方式二（进阶）：通过 IDEA 环境变量注入，不改文件</summary>
+<summary>方式二（进阶）：通过 VS Code launch.json 注入环境变量，不改文件</summary>
 
-`Run` → `Edit Configurations` → **Environment Variables**：
-```
-DB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306;DB_USER=userordertest;DB_PASSWORD=你的密码
+在 `.vscode/launch.json` 的 `env` 中添加：
+```json
+"env": {
+  "DB_HOST": "rm-xxx.mysql.rds.aliyuncs.com:3306",
+  "DB_USER": "userordertest",
+  "DB_PASSWORD": "你的密码"
+}
 ```
 </details>
 
@@ -294,11 +312,17 @@ spring:
 ```
 
 <details>
-<summary>方式二（进阶）：通过 IDEA 环境变量注入，不改文件</summary>
+<summary>方式二（进阶）：通过 VS Code launch.json 注入环境变量，不改文件</summary>
 
-`Run` → `Edit Configurations` → **Environment Variables**：
-```
-NACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848;DUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848;DB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306;DB_USER=userordertest;DB_PASSWORD=你的密码
+在 `.vscode/launch.json` 的 `env` 中添加：
+```json
+"env": {
+  "NACOS_ADDR": "mse-xxx.nacos.aliyuncs.com:8848",
+  "DUBBO_REGISTRY": "nacos://mse-xxx.nacos.aliyuncs.com:8848",
+  "DB_HOST": "rm-xxx.mysql.rds.aliyuncs.com:3306",
+  "DB_USER": "userordertest",
+  "DB_PASSWORD": "你的密码"
+}
 ```
 
 或命令行启动：
@@ -332,16 +356,16 @@ Nacos 由 EDAS Agent 自动接管，不需要设 `NACOS_ADDR` 和 `DUBBO_REGISTR
 
 > **注意：改完 yml 默认值，不要把修改提交到 Git**
 >
-> `application-dev.yml` 里包含你自己的密码和云上地址，提交后其他同学 clone 下来会连到你的资源。测试完成后用 `git checkout -- .` 还原文件，或在 IDEA 的 Git 面板右键 → Rollback 还原。
+> `application-dev.yml` 里包含你自己的密码和云上地址，提交后其他同学 clone 下来会连到你的资源。测试完成后用 `git checkout -- .` 还原文件，或在 VS Code 源代码管理面板（`Ctrl+Shift+G`）中右键对应文件 → `放弃更改`。
 
 ---
 
 ## Step 5：启动订单微服务
 
-**方法 A：在 IDEA 中启动（推荐）**
+**方法 A：在 VS Code 中启动（推荐）**
 
-1. 左侧项目树：`coffee-userorder` → `provider` → `src/main/java` → `com.coffee.yun.userorder` → `UserOrderApplication.java`
-2. 右键点击 → `Run 'UserOrderApplication.main()'`
+1. 左侧资源管理器：`coffee-userorder` → `provider` → `src/main/java` → `com.coffee.yun.userorder` → `UserOrderApplication.java`
+2. 打开文件，点击 `main` 方法上方出现的 **`Run`** CodeLens（蓝色小字），或右键 → `Run Java`
 
 **方法 B：命令行启动**
 
@@ -392,7 +416,7 @@ Started ExpressTrackApplication in x.xxx seconds
 Started CoffeeAppApplication in x.xxx seconds (JVM running for x.xxx)
 ```
 
-此时后端三个服务都已运行。建议使用 IDEA 的 **Services** 面板（`View` → `Tool Windows` → `Services`，或快捷键 `Alt+8`）统一查看所有运行中的 Spring Boot 应用，比分散在多个 Run 标签页里更清晰。
+此时后端三个服务都已运行。建议使用 VS Code 左侧的 **Spring Boot Dashboard** 面板（安装 Spring Boot Extension Pack 后出现）统一查看所有运行中的 Spring Boot 应用，比分散在多个终端标签页里更清晰。
 
 ---
 
@@ -531,7 +555,7 @@ kill -9 <PID>
 **解决方法：**
 1. 下载安装 JDK 17（推荐：[Adoptium Temurin 17](https://adoptium.net)）
 2. 设置 `JAVA_HOME` 环境变量指向 JDK 17 目录
-3. 重启 IDEA，在 `File` → `Project Structure` → `SDK` 中选择 Java 17
+3. 重启 VS Code，按 `Ctrl+Shift+P` 输入 `Java: Configure Java Runtime`，切换到 Java 17
 
 ---
 
@@ -541,7 +565,7 @@ kill -9 <PID>
 
 **排查步骤：**
 1. 确认 Nacos 已启动：访问 [http://localhost:8848/nacos](http://localhost:8848/nacos)
-2. 确认对应的微服务已启动（查看 IDEA Services 面板）
+2. 确认对应的微服务已启动（查看 VS Code Spring Boot Dashboard 面板）
 3. 确认端口没被防火墙拦截
 
 ---
