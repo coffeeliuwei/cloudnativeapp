@@ -505,27 +505,38 @@ Could not find artifact com.coffee.yun:coffee-userorder-api:jar:1.0-SNAPSHOT
 
 **操作步骤：**
 
-1. 在制品库控制台创建仓库后，进入仓库详情页，点击"**使用指南**"
-2. 选择 **Maven** 类型，控制台会显示你的仓库地址和认证信息
+1. 在制品库控制台创建仓库后，进入仓库详情页，点击右上角"**使用指南**"
+2. 选择 **Maven** 类型
+3. 控制台会自动生成你的仓库 ID 和 URL，后续配置都从这里复制
 
 ---
 
-### 6.2 pom.xml 已配置好，无需修改
+### 6.2 更新 pom.xml（三个源模块）
 
-> 项目里的 `pom.xml` 已经由教师配置好了 `<distributionManagement>`，指向本课程的制品库地址，**学生不需要改动任何 `pom.xml` 文件**。
+`pom.xml` 里的 `<distributionManagement>` 告诉 Maven"把 JAR 上传到哪里"。项目里目前写的是教师自己的制品库地址，**如果你要维护自己的项目，需要替换成你自己的仓库地址**。
 
-打开 `coffee-common/pom.xml` 可以看到已有的配置：
+需要修改的文件（共 3 个，其他模块不用改）：
+- `coffee-common/pom.xml`
+- `coffee-userorder/api/pom.xml`
+- `coffee-expresstrack/api/pom.xml`
+
+将每个文件里的 `<distributionManagement>` 替换为你自己的：
 
 ```xml
 <distributionManagement>
     <snapshotRepository>
-        <id>2643746-snapshot-a6HsOJ</id>   <!-- 仓库 ID，settings.xml 里必须用同一个 ID -->
-        <url>https://packages.aliyun.com/699e67ca9df7fdfa65468b27/maven/2643746-snapshot-a6hsoj</url>
+        <!--
+            id：自己起一个名字，全项目统一，后续 settings.xml 要用同一个 id
+            url：从制品库控制台"使用指南"复制你的 snapshot 仓库地址
+        -->
+        <id>你起的仓库ID</id>
+        <url>https://packages.aliyun.com/你的仓库路径/</url>
     </snapshotRepository>
 </distributionManagement>
 ```
 
-注意这里**只有 `<snapshotRepository>`，没有 `<repository>`（release 仓库）**。原因：本项目所有内部模块的版本号都带 `-SNAPSHOT`（开发版本），不会发布 release 版本，所以只需要 snapshot 仓库。
+> **为什么只有 snapshot，没有 release？**
+> 本项目所有内部模块版本号都带 `-SNAPSHOT`（如 `1.0-SNAPSHOT`），表示开发中的版本，只会上传到 snapshot 仓库。release 仓库用于发布正式版本（如 `1.0.0`），本项目不涉及，不需要配置。
 
 ---
 
@@ -545,18 +556,14 @@ Maven 访问私服时需要身份验证。**认证信息只写在你自己电脑
 | `<servers>` | 告诉 Maven 访问制品库时用什么账号密码 | `mvn deploy` 报 401 Unauthorized |
 | `<profiles>` 里的 `<repositories>` | 告诉 Maven 去哪个地址下载依赖 | 构建时报 Could not find artifact |
 
-**本项目只需要配置一个仓库（snapshot），完整的 `settings.xml` 如下：**
+**完整的 `settings.xml`（本项目只需要一个 snapshot 仓库）：**
 
 ```xml
 <settings>
   <!-- 第一部分：认证信息（上传和下载都要用） -->
   <servers>
     <server>
-      <!--
-        id 必须与 pom.xml 里 distributionManagement 的 id 一致：2643746-snapshot-a6HsOJ
-        用户名和密码从制品库控制台"使用指南"页面复制
-      -->
-      <id>2643746-snapshot-a6HsOJ</id>
+      <id>你起的仓库ID</id>          <!-- 必须与 pom.xml 里 distributionManagement 的 id 完全一致 -->
       <username>从控制台使用指南复制</username>
       <password>从控制台使用指南复制</password>
     </server>
@@ -568,12 +575,8 @@ Maven 访问私服时需要身份验证。**认证信息只写在你自己电脑
       <id>aliyun-artifacts</id>
       <repositories>
         <repository>
-          <!--
-            id 必须与上面 server 的 id 一致，Maven 靠 id 匹配认证信息
-            本项目只有 SNAPSHOT 版本，只需要这一个仓库，不需要配 release 仓库
-          -->
-          <id>2643746-snapshot-a6HsOJ</id>
-          <url>https://packages.aliyun.com/699e67ca9df7fdfa65468b27/maven/2643746-snapshot-a6hsoj</url>
+          <id>你起的仓库ID</id>      <!-- 必须与上面 server 的 id 完全一致 -->
+          <url>https://packages.aliyun.com/你的仓库路径/</url>   <!-- 与 pom.xml 里的 url 相同 -->
           <snapshots><enabled>true</enabled></snapshots>
           <releases><enabled>false</enabled></releases>
         </repository>
@@ -587,12 +590,19 @@ Maven 访问私服时需要身份验证。**认证信息只写在你自己电脑
 </settings>
 ```
 
-> **关键点：三个地方的 `id` 必须完全一致**
-> - `pom.xml` → `<distributionManagement>` → `<snapshotRepository>` → `<id>`
-> - `settings.xml` → `<servers>` → `<server>` → `<id>`
-> - `settings.xml` → `<profiles>` → `<repositories>` → `<repository>` → `<id>`
+> **关键：三处 `id` 必须完全一致**
 >
-> 三处都是 `2643746-snapshot-a6HsOJ`，Maven 靠这个 ID 把"去哪里找"和"用什么账号"关联起来。ID 不一致会导致下载时 401 认证失败。
+> Maven 靠 `id` 把"去哪里找"（repositories）和"用什么账号"（servers）关联起来：
+>
+> ```
+> pom.xml  <distributionManagement> → <snapshotRepository> → <id>你起的仓库ID</id>
+>                                                                        ↕ 必须相同
+> settings.xml  <servers> → <server> → <id>你起的仓库ID</id>
+>                                                ↕ 必须相同
+> settings.xml  <profiles> → <repositories> → <repository> → <id>你起的仓库ID</id>
+> ```
+>
+> 任何一处 `id` 对不上，要么上传时 401 认证失败，要么下载时找不到仓库。
 
 > **关于 Mirror 配置的注意事项**
 >
