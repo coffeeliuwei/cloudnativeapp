@@ -1,28 +1,36 @@
 # 开发环境配置（本地启动时设置 ENV=dev 加载此文件）
+#
+# 默认连接本地，切换到云上只需设置对应环境变量再启动，无需改代码：
+#
+#   本地（默认）：不设任何环境变量，直接 java -jar 启动即可
+#
+#   切换到云上 MSE Nacos + RDS（main 分支 Dubbo 3.x）：
+#     NACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848
+#     DUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848
+#     DB_HOST=rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com:3306
+#     DB_USER=expresstracktest
+#     DB_PASSWORD=Expresstracktest123
+#
+#   切换到 EDAS 内置 Nacos（dubbo2 分支 Dubbo 2.x，EDAS 部署时 Agent 会自动接管注册中心，
+#   本地联调 EDAS Nacos 时手动设置）：
+#     NACOS_ADDR=<EDAS-Nacos地址>:8848
+#     DUBBO_REGISTRY=nacos://<EDAS-Nacos地址>:8848
+#     DB_HOST / DB_USER / DB_PASSWORD 同上
 
 dubbo:
   registry:
-    address: nacos://127.0.0.1:8848
+    # 默认本地 Nacos；云上联调时通过 DUBBO_REGISTRY 环境变量注入 MSE 或 EDAS Nacos 地址
+    # 注意：实际部署到 EDAS 时，Pandora Agent 会自动接管注册中心，此配置被忽略
+    address: ${DUBBO_REGISTRY:nacos://127.0.0.1:8848}
 
-# 开发环境数据库配置
-# 此文件包含真实的数据库连接信息，已在 .gitignore 中排除，不会提交到 Git 仓库
-# 部署到其他环境时，替换下方各字段的默认值，或通过环境变量注入（如 DB_HOST=xxx java -jar ...）
+# Nacos 配置中心地址在 application.yml 的 spring.config.import 里通过
+# ${NACOS_ADDR:127.0.0.1:8848} 控制，无需在此重复配置
 
 database:
-  # 数据库账号，优先读取环境变量 DB_USER，未设置时使用默认值 expresstracktest
-  user: ${DB_USER:expresstracktest}
-
-  # 数据库密码，优先读取环境变量 DB_PASSWORD，未设置时使用默认值
-  password: ${DB_PASSWORD:Expresstracktest123}
-
-  # 阿里云 RDS MySQL 8.0 连接地址（内网地址，仅在阿里云 VPC 内可访问）
-  # 格式：<实例连接地址>:<端口>
-  # rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com 是阿里云 RDS 控制台分配的实例域名
-  # 与 coffee-userorder 使用同一台 RDS 实例，通过不同数据库名（expresstracktest）隔离数据
-  # 本地开发时若无法访问，需在 RDS 控制台将本机 IP 加入白名单，或使用公网地址
-  host: ${DB_HOST:rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com:3306}
-
-  # 数据库名称
+  # 默认本地 MySQL；云上部署时通过环境变量注入 RDS 连接信息
+  user: ${DB_USER:root}
+  password: ${DB_PASSWORD:123456}
+  host: ${DB_HOST:localhost:3307}
   dbname: ${DB_NAME:expresstracktest}
 
 # ── Redis（开发环境默认连本地）──────────────────────────────
