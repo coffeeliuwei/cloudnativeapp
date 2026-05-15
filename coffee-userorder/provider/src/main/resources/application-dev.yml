@@ -4,22 +4,16 @@
 #
 #   本地（默认）：不设任何环境变量，直接 java -jar 启动即可
 #
-#   切换到云上 MSE Nacos + RDS（main 分支 Dubbo 3.x）：
-#     NACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848
-#     DUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848
-#     DB_HOST=rm-2ze9l0n62f3p22hrwgo.mysql.rds.aliyuncs.com:3306
-#     DB_USER=userordertest
-#     DB_PASSWORD=Userordertest123
-#
-#   切换到 EDAS 内置 Nacos（dubbo2 分支 Dubbo 2.x，EDAS 部署时 Agent 会自动接管注册中心，
-#   本地联调 EDAS Nacos 时手动设置）：
+#   切换到云上 RDS + EDAS Nacos：
 #     NACOS_ADDR=<EDAS-Nacos地址>:8848
 #     DUBBO_REGISTRY=nacos://<EDAS-Nacos地址>:8848
-#     DB_HOST / DB_USER / DB_PASSWORD 同上
+#     DB_HOST=rm-xxxxxxxxxxxxxxxxx.mysql.rds.aliyuncs.com:3306
+#     DB_USER=userordertest
+#     DB_PASSWORD=Userordertest123
 
 dubbo:
   registry:
-    # 默认本地 Nacos；云上联调时通过 DUBBO_REGISTRY 环境变量注入 MSE 或 EDAS Nacos 地址
+    # 默认本地 Nacos；云上联调时通过 DUBBO_REGISTRY 注入 EDAS Nacos 地址
     # 注意：实际部署到 EDAS 时，Pandora Agent 会自动接管注册中心，此配置被忽略
     address: ${DUBBO_REGISTRY:nacos://127.0.0.1:8848}
 
@@ -32,32 +26,3 @@ database:
   password: ${DB_PASSWORD:123456}
   host: ${DB_HOST:localhost:3307}
   dbname: ${DB_NAME:userordertest}
-
-# ── Redis（开发环境默认连本地，如用 Docker 启动则无需修改）─────
-# Spring Boot 2.x 使用 spring.redis.*（3.x 改为 spring.data.redis.*）
-spring:
-  redis:
-    host: ${REDIS_HOST:localhost}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
-
-# ── RocketMQ（Name Server 默认为空，未配置时自动跳过 RocketMQ 初始化）
-# 本地启动 RocketMQ 后将 ROCKETMQ_NAMESERVER=127.0.0.1:9876 设置为环境变量
-rocketmq:
-  name-server: ${ROCKETMQ_NAMESERVER:}
-
-# ── 缓存 TTL 默认值（可在 Nacos Config 中覆盖，无需重启生效）──
-# Nacos 数据 ID：coffee-userorder.properties
-# 修改后，@RefreshScope Bean 会自动拿到新值
-cache:
-  ttl:
-    # 订单详情缓存时长（秒），默认 30 分钟
-    order: 1800
-
-# ── 功能开关（默认全部关闭，保持原项目可正常启动）────────────
-# 按需开启：确保对应基础设施（Redis/RocketMQ）已启动后再设为 true
-feature:
-  cache:
-    enabled: false   # true = 启用 Redis 缓存（需先启动 Redis）
-  mq:
-    enabled: false   # true = 启用 RocketMQ 消息队列（需先启动 RocketMQ 并设置 ROCKETMQ_NAMESERVER）

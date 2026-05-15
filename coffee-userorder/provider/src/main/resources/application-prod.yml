@@ -8,30 +8,3 @@ database:
   password: ${DB_PASSWORD:Userordertest123}
   host: ${DB_HOST:rm-xxxxxxxxxxxxxxxxx.mysql.rds.aliyuncs.com:3306}
   dbname: ${DB_NAME:userordertest}
-
-# ── Redis / Tair（生产环境连接阿里云 Tair 兼容版）────────────
-# 替换为控制台"实例详情 > 连接地址（内网）"中的域名
-# 使用默认账号时 REDIS_PASSWORD 填密码；使用自定义账号时填 "用户名:密码"
-# Spring Boot 2.x 使用 spring.redis.*
-spring:
-  redis:
-    host: ${REDIS_HOST:r-xxxxxxxxxxxxxxxx.redis.rds.aliyuncs.com}
-    port: ${REDIS_PORT:6379}
-    password: ${REDIS_PASSWORD:}
-
-# ── RocketMQ（生产环境连接阿里云托管 RocketMQ，需 AccessKey 认证）──
-# ROCKETMQ_NAMESERVER：控制台"实例详情 > 获取接入点"中的地址，格式 host:8080
-# ROCKETMQ_ACCESS_KEY / ROCKETMQ_SECRET_KEY：RAM 子账号 AccessKey，从 RAM 控制台获取
-rocketmq:
-  name-server: ${ROCKETMQ_NAMESERVER:MQ_INST_xxxxxxxxxxxxxxxx_BXXXxXxX.mq-internet-access.mq.aliyuncs.com:80}
-  access-channel: CLOUD
-  producer:
-    access-key: ${ROCKETMQ_ACCESS_KEY:}
-    secret-key: ${ROCKETMQ_SECRET_KEY:}
-
-# ── 功能开关（生产环境默认全部开启）──────────────────────────
-feature:
-  cache:
-    enabled: true
-  mq:
-    enabled: true
