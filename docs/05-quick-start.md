@@ -153,41 +153,102 @@ mvn clean install -DskipTests
 
 ---
 
-## Step 4：配置数据库连接
+## Step 4：了解配置方式——环境变量
 
-每个微服务的 `application-dev.yml` 中需要填写实际的数据库连接信息。
-
-**coffee-userorder/provider/src/main/resources/application-dev.yml：**
+打开 `coffee-userorder/provider/src/main/resources/application-dev.yml`，你会看到这样的写法：
 
 ```yaml
 database:
-  user: userordertest        # 数据库账号
-  password: 你的密码
-  host: localhost:3306       # 本地 MySQL；如用阿里云 RDS 则填外网地址
-  dbname: userordertest
-
-nacos:
-  host: localhost            # Nacos 地址
-  port: 8848
+  user: ${DB_USER:root}
+  password: ${DB_PASSWORD:123456}
+  host: ${DB_HOST:localhost:3307}
+  dbname: ${DB_NAME:userordertest}
 ```
 
-**coffee-expresstrack/provider/src/main/resources/application-dev.yml：**
+`${DB_USER:root}` 的意思是：**先读名为 `DB_USER` 的环境变量，如果没有设置就用 `root` 作为默认值**。
 
-```yaml
-database:
-  user: expresstracktest
-  password: 你的密码
-  host: localhost:3306
-  dbname: expresstracktest
+这样设计的好处是：**不需要改任何代码文件**，只需要在启动时注入对应的环境变量，就能切换本地/云上不同的配置。
 
-nacos:
-  host: localhost
-  port: 8848
+---
+
+### 本项目用到的所有环境变量
+
+| 变量名 | 作用 | 本地默认值 | 需要改的场景 |
+|--------|------|-----------|------------|
+| `DB_USER` | 数据库用户名 | `root` | 本地 MySQL 用户名不是 root 时 |
+| `DB_PASSWORD` | 数据库密码 | `123456` | 本地 MySQL 密码不是 123456 时 |
+| `DB_HOST` | 数据库地址和端口 | `localhost:3307` | 连阿里云 RDS 时 |
+| `DB_NAME` | 数据库名 | `userordertest` / `expresstracktest` | 一般不需要改 |
+| `NACOS_ADDR` | Nacos 配置中心地址 | `127.0.0.1:8848` | 连云上 MSE Nacos 时 |
+| `DUBBO_REGISTRY` | Dubbo 注册中心地址 | `nacos://127.0.0.1:8848` | 连云上 MSE Nacos 时 |
+| `ENV` | 激活哪套配置文件 | `dev`（加载 application-dev.yml）| 部署到 EDAS 时设为 `prod` |
+
+---
+
+### 四种场景，该怎么做
+
+**场景一：本地 Nacos + 本地 MySQL（默认密码 root/123456）**
+
+什么都不用设，直接启动。所有变量都有默认值，自动使用本地配置。
+
+---
+
+**场景二：本地 Nacos + 本地 MySQL（密码不是 123456）**
+
+只需要设数据库密码，其他保持默认。
+
+在 **IDEA** 里：Run → Edit Configurations → 选中启动类 → **Environment Variables** 输入框：
+
+```
+DB_USER=你的用户名;DB_PASSWORD=你的密码
 ```
 
-> **本地 MySQL vs 阿里云 RDS：**
-> - 本地开发：`host: localhost:3306`
-> - 阿里云 RDS：`host: rm-xxx.mysql.rds.aliyuncs.com:3306`（在阿里云控制台 → RDS 实例 → 基本信息 → 外网地址查看）
+在**命令行**启动时用 `-D` 前缀：
+
+```bash
+java -DDB_USER=你的用户名 -DDB_PASSWORD=你的密码 -jar coffee-userorder-provider-1.0-SNAPSHOT.jar
+```
+
+---
+
+**场景三：本地 Nacos + 阿里云 RDS**
+
+需要把数据库地址指向 RDS 外网地址：
+
+IDEA Environment Variables：
+```
+DB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306;DB_USER=userordertest;DB_PASSWORD=你的RDS密码
+```
+
+命令行：
+```bash
+java -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 \
+     -DDB_USER=userordertest \
+     -DDB_PASSWORD=你的密码 \
+     -jar coffee-userorder-provider-1.0-SNAPSHOT.jar
+```
+
+---
+
+**场景四：部署到 EDAS（云上完整部署）**
+
+在 EDAS 控制台创建/部署应用时，找到 **JVM 参数**输入框，填入：
+
+```
+-Xms128m -Xmx256m -DENV=prod -DDB_HOST=rm-xxx:3306 -DDB_USER=userordertest -DDB_PASSWORD=你的密码
+```
+
+Nacos 由 EDAS Agent 自动接管，不需要设 `NACOS_ADDR` 和 `DUBBO_REGISTRY`。
+
+详细步骤见 [EDAS ECS 集群部署指南](./06-edas-deployment.md)。
+
+---
+
+> **推荐：IDEA 里统一管理环境变量**
+>
+> `Run` → `Edit Configurations` → 点击左侧对应的启动配置 → 右侧找到 **Environment Variables** 一栏，点击右边的 `...` 图标可以逐条填写，比手动写分号分隔的字符串更直观。
+>
+> 设置一次后 IDEA 会记住，下次直接运行不需要重设。
 
 ---
 
