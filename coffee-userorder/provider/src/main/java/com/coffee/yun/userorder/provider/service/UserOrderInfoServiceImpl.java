@@ -79,13 +79,10 @@ public class UserOrderInfoServiceImpl implements UserOrderInfoService {
     public String createOrder(UserOrderCreateDTO createDTO) {
         log.info("创建订单：{}", JSON.toJSONString(createDTO));
 
-        // 组装 MyBatis 参数 Map，对应 UserOrderMapper.xml 中 insertOrder 的 #{} 占位符
         Map<String, Object> params = new HashMap<>();
         params.put("order_id", createDTO.getOrder_id());
         params.put("OneID", createDTO.getOneID());
         params.put("order_amount", createDTO.getOrder_amount());
-        params.put("order_status", "待发货");   // 新订单默认状态
-        // 执行 INSERT SQL，对应 UserOrderMapper.xml 中 id="insertOrder" 的语句
         sqlSessionTemplate.insert("UserOrderMapper.insertOrder", params);
         log.info("订单写入数据库成功，order_id={}", createDTO.getOrder_id());
 

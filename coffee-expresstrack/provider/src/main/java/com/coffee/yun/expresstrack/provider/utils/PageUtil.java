@@ -48,8 +48,10 @@ public class PageUtil<T> {
         log.info("开始分页查询 {} 参数：{}", template, JSON.toJSONString(basePageDTO));
         PageInfo<T> pageInfo = null;
         try {
-            // startPage() 设置分页参数，doSelectPageInfo() 执行查询并封装为含分页信息的 PageInfo
-            pageInfo = PageHelper.startPage(basePageDTO.getPageNum(), basePageDTO.getPageSize())
+            // pageNum/pageSize 未传时默认取第1页，每页100条（保证轨迹数据全部返回）
+            int pageNum = basePageDTO.getPageNum() <= 0 ? 1 : basePageDTO.getPageNum();
+            int pageSize = basePageDTO.getPageSize() <= 0 ? 100 : basePageDTO.getPageSize();
+            pageInfo = PageHelper.startPage(pageNum, pageSize)
                     .doSelectPageInfo(() -> sqlSessionTemplate.selectList(template, basePageDTO));
         } catch (Exception e) {
             log.error("分页查询异常：{}", e.getMessage());

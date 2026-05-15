@@ -15,8 +15,8 @@
         写入成功后发布消息到 RocketMQ，触发 coffee-expresstrack 异步创建快递单。
     -->
     <insert id="insertOrder" parameterType="map">
-        INSERT INTO `order` (order_id, OneID, order_amount, order_status)
-        VALUES (#{order_id}, #{OneID}, #{order_amount}, #{order_status})
+        INSERT INTO `order` (order_id, OneID, order_amount)
+        VALUES (#{order_id}, #{OneID}, #{order_amount})
     </insert>
 
     <select id="selectByParam" resultMap="BaseResultMap" parameterType="com.coffee.yun.userorder.api.dto.UserOrderInfoParamDTO">

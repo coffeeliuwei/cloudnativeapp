@@ -115,6 +115,7 @@
         <dependency>
             <groupId>org.springframework.cloud</groupId>
             <artifactId>spring-cloud-context</artifactId>
+            <version>4.1.1</version>
         </dependency>
 
         <!-- Spring Boot Test -->

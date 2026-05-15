@@ -36,8 +36,10 @@
         track_show
         FROM `express`
         LEFT JOIN `track` on `express`.`express_id`= `track`.`express_id`
-        <if test="order_id!=null and order_id!=''">
-            and order_id = #{order_id,jdbcType=VARCHAR}
-        </if>
+        <where>
+            <if test="order_id!=null and order_id!=''">
+                order_id = #{order_id,jdbcType=VARCHAR}
+            </if>
+        </where>
     </select>
 </mapper>
