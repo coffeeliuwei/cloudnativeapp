@@ -237,6 +237,8 @@ database:
 >
 > 如果你暂时不想配置阿里云制品库，或只是在本地运行学习，项目已将编译好的内部 JAR 内置在 `lib-repo/` 目录中并随 GitHub 代码一起分发。相关 `pom.xml` 已预先配置好，Maven 会自动从该目录读取，**无需任何手动操作**，clone 后直接构建即可。
 >
+> `lib-repo/` 通过 `file://` 协议指向本地磁盘上的相对路径，每个人用的都是自己克隆下来的那份，不依赖任何网络服务，**断网环境下同样可以构建**。
+>
 > **lib-repo 的两种失效场景：**
 > - `settings.xml` 里有 `<mirror mirrorOf="*">`：mirror 会拦截所有仓库请求，包括 `lib-repo/`，内部 JAR 必须实际上传到制品库才能找到
 > - 已配置制品库但内部 JAR 未上传（未执行 `mvn deploy`）+ 配了 mirror：构建报 `Could not find artifact`，需先完成 [§ 6.4 上传 JAR](./01-aliyun-guide.md#64-上传-jar-到私服)
