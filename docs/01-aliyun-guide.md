@@ -408,39 +408,74 @@ level: ERROR | SELECT * ORDER BY __time__ DESC LIMIT 100
 
 ## 6. 阿里云制品库（Maven 私服）
 
-### 制品库是什么？为什么要用私服？
+### 先理解"问题是什么"
 
-**制品库**（Artifact Repository）是存储 Maven 依赖包（JAR 文件）的私有仓库，作用类似于"公司内部的 Maven Central"。
+在本项目里，`coffee-app` 需要用到 `coffee-userorder-api` 和 `coffee-expresstrack-api` 这两个内部模块的代码。
 
-**为什么需要它：**
+**本地开发时没问题：** 你在自己电脑上跑一次 `mvn install`，Maven 会把这两个模块打成 JAR 包，存到你本机的 `C:\Users\你的用户名\.m2\repository\` 目录里，之后 `coffee-app` 就能找到它们。
 
-- `coffee-app` 需要引用 `coffee-userorder-api` 和 `coffee-expresstrack-api`
-- 本地开发时用 `mvn install` 安装到本地 `~/.m2/repository`，其他人的电脑上没有
-- **如果多人协作或部署到 CI/CD**，私服让所有人能从同一个地方拉取内部依赖
+**问题出在部署到云上：** 云上的服务器（EDAS）没有你的本机文件。它构建 `coffee-app` 时，找不到 `coffee-userorder-api` 的 JAR，直接报错：
+```
+Could not find artifact com.coffee.yun:coffee-userorder-api:jar:1.0-SNAPSHOT
+```
 
-**SNAPSHOT vs RELEASE 版本的区别：**
+**解决方法：** 把这些内部 JAR 上传到一个云上的仓库（制品库），让云服务器也能下载到。这就是 **Maven 私服**的作用——相当于"公司内部的 Maven 中央仓库"。
 
-| 类型 | 版本号格式 | 特点 | 适用场景 |
-|------|----------|------|---------|
-| SNAPSHOT | `1.0.0-SNAPSHOT` | 可以被覆盖（同一版本号可以多次发布）| 开发中的版本，频繁迭代 |
-| RELEASE | `1.0.0` | 不可变（发布后不能修改）| 稳定版本，正式交付 |
+```
+你的电脑                          阿里云制品库（私服）            EDAS 云服务器
+   │                                    │                              │
+   │── mvn deploy ──────────────────▶  │  coffee-userorder-api.jar    │
+   │   （把 JAR 上传到私服）             │  coffee-expresstrack-api.jar │
+   │                                    │                              │
+   │                                    │◀──── 构建时自动下载 ──────────│
+   │                                    │      （mvn package）         │
+```
 
-本项目各模块版本号带 `-SNAPSHOT`，表示还在开发中，可以反复发布。
+---
+
+### SNAPSHOT 和 RELEASE 是什么？
+
+你会看到项目版本号是 `1.0-SNAPSHOT`，这里解释一下：
+
+| 类型 | 举例 | 意思 |
+|------|------|------|
+| **SNAPSHOT** | `1.0-SNAPSHOT` | 开发中的版本，可以反复覆盖发布（改了代码重新 deploy 会自动替换） |
+| **RELEASE** | `1.0` | 正式发布的稳定版，一旦发布不允许修改 |
+
+本项目所有模块都是 `1.0-SNAPSHOT`，所以每次改完代码重新 `mvn deploy` 就会覆盖之前的版本，不用改版本号。
+
+---
 
 ### 6.1 创建制品仓库
 
-1. 控制台搜索 **制品库**（或访问 [https://packages.aliyun.com](https://packages.aliyun.com)）
-2. 创建两个仓库：
-   - 类型：Maven，仓库名：`cloudnativeapp-snapshot`（SNAPSHOT 版本）
-   - 类型：Maven，仓库名：`cloudnativeapp-release`（Release 版本）
-3. 获取仓库 URL，格式类似：
+1. 登录阿里云控制台，搜索 **制品库**（或直接访问 [packages.aliyun.com](https://packages.aliyun.com)）
+2. 点击"创建仓库"，创建 **两个** Maven 类型的仓库：
+
+   | 仓库 | 建议名称 | 用途 |
+   |------|---------|------|
+   | SNAPSHOT 仓库 | `cloudnativeapp-snapshot` | 存放开发中的版本（-SNAPSHOT） |
+   | Release 仓库 | `cloudnativeapp-release` | 存放正式版本（暂时用不到） |
+
+3. 创建完成后，点击仓库名进入详情，记下仓库 URL，格式类似：
    ```
    https://packages.aliyun.com/maven/repository/xxxxxx-snapshot-xxxxxx/
    ```
 
-### 6.2 配置 pom.xml（发布目标）
+---
 
-将每个模块 `pom.xml` 中的 `distributionManagement` 替换为你的仓库地址（控制台会提供完整配置，直接复制即可）：
+### 6.2 让控制台帮你生成配置
+
+> **重要：不需要手动写配置！** 制品库控制台提供了"一键生成配置"功能，直接复制粘贴即可。
+
+**操作步骤：**
+
+1. 进入制品库控制台，点击右上角"**使用指南**"或"**配置指南**"
+2. 选择 **Maven** 类型
+3. 控制台会自动生成两段配置，分别填入 `pom.xml` 和 `settings.xml`
+
+生成的配置长这样（你的 URL 和认证信息会自动填好）：
+
+**第一段：复制到各模块的 `pom.xml`**（告诉 Maven"发布到哪里"）
 
 ```xml
 <distributionManagement>
@@ -455,26 +490,40 @@ level: ERROR | SELECT * ORDER BY __time__ DESC LIMIT 100
 </distributionManagement>
 ```
 
-### 6.3 配置 settings.xml 认证（发布和拉取都需要）
+把这段加到 `coffee-common/pom.xml`、`coffee-userorder/api/pom.xml`、`coffee-expresstrack/api/pom.xml` 这三个文件的 `</project>` 标签前面。（`coffee-app`、`coffee-userorder/provider`、`coffee-expresstrack/provider` 不需要加，它们不会被别人依赖。）
 
-在 `~/.m2/settings.xml` 中添加服务器认证（`id` 必须与 pom.xml 中一致）：
+---
+
+### 6.3 配置认证信息（settings.xml）
+
+Maven 上传/下载私服时需要登录验证。认证信息写在 **你电脑上的** `settings.xml` 文件里，而不是项目文件里（避免密码提交到 Git）。
+
+**找到 settings.xml 的位置：**
+- Windows：`C:\Users\你的用户名\.m2\settings.xml`
+- Mac/Linux：`~/.m2/settings.xml`
+- 如果文件不存在，新建一个
+
+> 控制台的"配置指南"同样会生成完整的 `settings.xml` 内容，直接复制覆盖即可。
+
+生成内容包含两部分，缺一不可：
 
 ```xml
 <settings>
+  <!-- 第一部分：认证信息（上传时用） -->
   <servers>
     <server>
       <id>rdc-snapshots</id>
-      <username>你的阿里云账号或RAM子账号用户名</username>
-      <password>你的密码</password>
+      <username>控制台生成的用户名</username>
+      <password>控制台生成的密码</password>
     </server>
     <server>
       <id>rdc-releases</id>
-      <username>你的阿里云账号或RAM子账号用户名</username>
-      <password>你的密码</password>
+      <username>控制台生成的用户名</username>
+      <password>控制台生成的密码</password>
     </server>
   </servers>
 
-  <!-- 配置从私服拉取依赖 -->
+  <!-- 第二部分：仓库地址（下载时用） -->
   <profiles>
     <profile>
       <id>aliyun-artifacts</id>
@@ -501,29 +550,61 @@ level: ERROR | SELECT * ORDER BY __time__ DESC LIMIT 100
 </settings>
 ```
 
-> **只配发布还不够！** 很多同学只配了 `distributionManagement`（用于发布），却没有配 `repositories`（用于拉取）。结果发布成功了，但其他模块构建时仍然从 Maven Central 找依赖，找不到就报 `Could not find artifact`。两者都需要配置。
+> **新手常见错误：** 只配了"第一部分"（发布用的认证），忘了配"第二部分"（下载用的仓库地址）。导致 `mvn deploy` 成功，但 `coffee-app` 构建时还是报找不到依赖。**两部分都要有！**
 
-### 6.4 发布模块到私服
+---
+
+### 6.4 上传 JAR 到私服
+
+配置完成后，按顺序执行 `mvn deploy`（注意顺序：被依赖的先上传）：
 
 ```bash
-# 必须按依赖顺序发布
-
-# 1. 公共库（最先发布，其他模块都依赖它）
+# 第1步：上传公共库（coffee-userorder-api 和 coffee-expresstrack-api 都依赖它）
 cd coffee-common
 mvn clean deploy -DskipTests
 
-# 2. 订单服务 API
+# 第2步：上传订单服务的接口包（coffee-app 依赖它）
 cd ../coffee-userorder/api
 mvn clean deploy -DskipTests
 
-# 3. 快递服务 API
+# 第3步：上传快递服务的接口包（coffee-app 依赖它）
 cd ../../coffee-expresstrack/api
 mvn clean deploy -DskipTests
-
-# 发布完成后，在制品库控制台可以看到已上传的包
 ```
 
-发布成功后，其他人克隆项目时，Maven 会自动从私服下载这些内部依赖，无需再手动执行 `mvn install`。
+上传成功后，在制品库控制台能看到这几个包：
+- `com.coffee.yun:coffee-common:1.0-SNAPSHOT`
+- `com.coffee.yun:coffee-userorder-api:1.0-SNAPSHOT`
+- `com.coffee.yun:coffee-expresstrack-api:1.0-SNAPSHOT`
+
+---
+
+### 6.5 验证是否生效
+
+**测试方法：** 删掉本机 `.m2` 缓存中对应的包，重新构建 `coffee-app`，看它能否自动从私服下载。
+
+```bash
+# 删除本机缓存（模拟"从未 mvn install"的状态）
+# Windows
+rmdir /s /q "C:\Users\你的用户名\.m2\repository\com\coffee"
+
+# 重新构建 coffee-app（此时只能从私服下载依赖）
+cd coffee-app
+mvn clean package -DskipTests
+```
+
+如果构建成功，说明私服配置完全正确。
+
+---
+
+### 常见错误速查
+
+| 错误信息 | 原因 | 解决方法 |
+|---------|------|---------|
+| `Could not find artifact` | 未上传到私服，或 settings.xml 没配下载地址 | 先 `mvn deploy`，再检查 settings.xml 的 `<profiles>` 段 |
+| `401 Unauthorized` | 认证信息错误 | 检查 settings.xml 中的用户名和密码，建议从控制台重新复制 |
+| `405 Method Not Allowed` | 仓库类型配置错误（把 release 地址用于 SNAPSHOT）| 确认 pom.xml 中 snapshot 和 release 的 URL 没有填反 |
+| deploy 成功但云上仍报找不到 | EDAS 构建时没有使用你的私服配置 | 在 EDAS 应用配置里添加 Maven 仓库地址和认证信息 |
 
 ---
 
