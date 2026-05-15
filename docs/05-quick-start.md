@@ -117,19 +117,19 @@ Nacos started successfully in stand alone mode. use embedded storage
 
 ## Step 2：确认数据库可用
 
-执行 [数据库初始化 SQL](./04-database.md#4-完整初始化-sql)，确保两个数据库都已创建并有测试数据。
+按照 [数据库初始化文档](./04-database.md#4-初始化步骤) 执行 `sql/` 目录下的两个脚本，确保两个数据库都已创建并有测试数据。
 
 **快速验证（在 MySQL 客户端或 Navicat 中执行）：**
 
 ```sql
 USE userordertest;
-SELECT * FROM `order`;   -- 应该看到 4 条测试数据
+SELECT * FROM `order`;   -- 应该看到 3 条测试数据
 
 USE expresstracktest;
-SELECT * FROM track;     -- 应该看到 8 条轨迹数据
+SELECT * FROM track;     -- 应该看到 2 条轨迹数据
 ```
 
-如果数据存在，继续下一步。如果提示"表不存在"或"数据库不存在"，回到数据库文档重新执行初始化 SQL。
+如果数据存在，继续下一步。如果提示"表不存在"或"数据库不存在"，回到 [数据库初始化文档](./04-database.md#4-初始化步骤) 重新执行。
 
 ---
 
@@ -422,10 +422,10 @@ Started CoffeeAppApplication in x.xxx seconds (JVM running for x.xxx)
 
 ## Step 8：测试后端接口
 
-打开浏览器，访问：
+打开浏览器，访问（使用测试数据中实际存在的订单号）：
 
 ```
-http://localhost:8005/hello/ORDER001
+http://localhost:8005/hello/44556677
 ```
 
 **期望结果（JSON 格式）：**
@@ -434,44 +434,20 @@ http://localhost:8005/hello/ORDER001
 {
   "list": [
     {
-      "order_id": "ORDER001",
-      "express_id": "EX20240001",
-      "express_weight": "1.5kg",
-      "track_id": "T001",
-      "track_show": "2024-01-01 10:00 【北京朝阳区】 快件已揽收"
-    },
-    {
-      "order_id": "ORDER001",
-      "express_id": "EX20240001",
-      "express_weight": "1.5kg",
-      "track_id": "T002",
-      "track_show": "2024-01-01 20:00 【北京转运中心】 快件已到达分拣中心，正在分拣"
+      "order_id": "44556677",
+      "express_id": "33224455",
+      "express_weight": 2.0,
+      "track_id": "11223344",
+      "track_show": "已发出"
     }
   ],
-  "total": 5
+  "total": 1
 }
 ```
 
 看到这个 JSON，后端已经完全跑起来了。
 
-**验证创建订单接口：**
-
-```bash
-# 使用 curl 或 Postman 调用创建订单接口
-curl -X POST http://localhost:8005/createOrder \
-  -H "Content-Type: application/json" \
-  -d '{"order_id":"ORDER100","OneID":"U001","order_amount":199.0}'
-```
-
-**期望结果：**
-```json
-{"success":true,"code":200,"result":"ORDER100"}
-```
-
-随后查询轨迹：
-```
-GET http://localhost:8005/hello/ORDER100
-```
+> 测试数据中 order_id `44556677` 关联快递 `33224455`，快递下有 1 条有效轨迹记录。order_id `32423423` 无关联快递，返回空列表属正常现象。
 
 ---
 
@@ -501,7 +477,7 @@ npm run dev
 
 **验证全栈跑通：**
 1. 进入左侧"**订单管理**"页 → 能看到订单列表（空时表格为空行）
-2. 进入左侧"**轨迹查询**"页 → 输入 `ORDER001` 点击搜索，能看到快递轨迹表格，说明全栈完全跑通
+2. 进入左侧"**轨迹查询**"页 → 输入 `44556677` 点击搜索，能看到快递轨迹表格，说明全栈完全跑通
 
 ---
 
