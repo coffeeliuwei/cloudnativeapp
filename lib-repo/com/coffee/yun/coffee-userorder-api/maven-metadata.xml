@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata>
+  <groupId>com.coffee.yun</groupId>
+  <artifactId>coffee-userorder-api</artifactId>
+  <versioning>
+    <versions>
+      <version>1.0-SNAPSHOT</version>
+    </versions>
+    <lastUpdated>20260515021158</lastUpdated>
+  </versioning>
+</metadata>

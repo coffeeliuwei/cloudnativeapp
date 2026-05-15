@@ -225,27 +225,106 @@ database:
 
 ## 7. 打包构建
 
-### 7.1 安装本地依赖（首次或依赖变更时）
+### 7.1 先理解：什么是"内部依赖"
 
-```bash
-cd coffee-common           && mvn clean install -DskipTests
-cd ../coffee-userorder/api && mvn clean install -DskipTests
-cd ../../coffee-expresstrack/api && mvn clean install -DskipTests
+本项目有三个被其他模块依赖的内部库：
+
+| 内部模块 | 被谁使用 | 说明 |
+|---------|---------|------|
+| `coffee-common` | `coffee-userorder-api`、`coffee-expresstrack-api` | 公共工具类和 DTO |
+| `coffee-userorder-api` | `coffee-app`、`coffee-userorder/provider` | 订单服务接口定义 |
+| `coffee-expresstrack-api` | `coffee-app`、`coffee-expresstrack/provider` | 快递服务接口定义 |
+
+Maven 在构建时需要能**找到**这些依赖的 JAR 文件。问题在于：这三个模块不在 Maven Central，也不在本地 `.m2` 缓存（首次 clone 时），需要额外配置。
+
+---
+
+### 7.2 两种解决方案对比
+
+本项目同时支持两种方案，适配不同场景：
+
+| | **方案 A：lib-repo（GitHub 内置）** | **方案 B：阿里云制品库** |
+|-|-------------------------------------|-------------------------|
+| 适合场景 | 学生本地构建、IDE 开发 | EDAS 云端构建（上传 JAR） |
+| 需要配置 | 无需任何配置，clone 即用 | 需配置 settings.xml 认证 |
+| 原理 | JAR 随项目代码提交到 GitHub，Maven 从 `lib-repo/` 目录读取 | JAR 上传到阿里云私服，EDAS 打包时从私服下载 |
+| 谁需要操作 | 教师修改接口后运行一次脚本 | 教师修改接口后运行 `mvn deploy` |
+
+**结论**：
+- 学生本地开发 → **直接用方案 A，什么都不用配**
+- EDAS 云端部署 → **需要方案 B**（详见 [阿里云服务配置指南 § 6 制品库](./01-aliyun-guide.md#6-阿里云制品库maven-私服)）
+
+---
+
+### 7.3 方案 A：lib-repo 的工作原理（学生不需要操作，了解即可）
+
+项目根目录下有一个 `lib-repo/` 目录，结构类似 Maven 本地仓库：
+
+```
+lib-repo/
+└── com/coffee/yun/
+    ├── coffee-common/1.0-SNAPSHOT/
+    │   ├── coffee-common-1.0-SNAPSHOT.jar   ← 实际 JAR 文件
+    │   └── maven-metadata.xml               ← Maven 用来定位文件的元数据
+    ├── coffee-userorder-api/1.0-SNAPSHOT/
+    └── coffee-expresstrack-api/1.0-SNAPSHOT/
 ```
 
-### 7.2 打包微服务
+`coffee-app`、`coffee-userorder/provider`、`coffee-expresstrack/provider` 的 `pom.xml` 已配置：
+
+```xml
+<repositories>
+    <repository>
+        <id>project-lib-repo</id>
+        <name>项目内置依赖仓库</name>
+        <url>file:///${project.basedir}/../lib-repo</url>  <!-- 指向本地 lib-repo/ 目录 -->
+        <snapshots><enabled>true</enabled></snapshots>
+    </repository>
+</repositories>
+```
+
+Maven 解析依赖时：本地 `.m2` 没有 → **先查 `lib-repo/`** → 再查 Maven Central
+
+所以学生 clone 后，Maven 会从 `lib-repo/` 找到 JAR，**不需要任何额外步骤**。
+
+---
+
+### 7.4 教师维护：内部接口变更后更新 lib-repo
+
+> 普通学生跳过此步骤。只有当 `coffee-common`、`coffee-userorder-api` 或 `coffee-expresstrack-api` 的代码发生变更时，教师需要执行以下步骤：
+
+**Windows 下运行（在项目根目录）：**
+
+```cmd
+deploy-lib-repo.cmd
+```
+
+**脚本做了什么：**
+1. 编译三个源模块，生成最新 JAR
+2. 将 JAR 和 POM 文件写入 `lib-repo/`（同时更新 `maven-metadata.xml`）
+3. 脚本完成后，`git add lib-repo/ && git commit && git push` 即可让所有学生拿到最新版本
+
+---
+
+### 7.5 打包微服务 JAR
+
+完成上述依赖配置后，打包各服务：
 
 ```bash
-# 打包订单服务
+# 打包订单服务（产物：target/coffee-userorder-provider-1.0-SNAPSHOT.jar）
 cd coffee-userorder/provider
 mvn clean package -DskipTests
-# 产物：target/provider-1.0-SNAPSHOT.jar
 
-# 打包快递服务
+# 打包快递服务（产物：target/coffee-expresstrack-provider-1.0-SNAPSHOT.jar）
 cd ../../coffee-expresstrack/provider
 mvn clean package -DskipTests
-# 产物：target/provider-1.0-SNAPSHOT.jar
+
+# 打包 API 网关（产物：target/coffee-app-0.0.1-SNAPSHOT.jar）
+cd ../../coffee-app
+mvn clean package -DskipTests
 ```
+
+> **如果遇到 "Cannot access project-lib-repo" 或找不到依赖的错误**，说明 `lib-repo/` 目录缺失或损坏。请联系教师重新运行 `deploy-lib-repo.cmd` 并推送更新。
 
 ---
 

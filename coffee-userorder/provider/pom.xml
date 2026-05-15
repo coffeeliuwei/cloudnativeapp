@@ -125,6 +125,22 @@
         </dependency>
     </dependencies>
 
+    <!--
+        优先从项目随附的 lib-repo/ 目录解析内部依赖（coffee-userorder-api、coffee-common）。
+        lib-repo/ 随代码一起提交到 GitHub，学生克隆后无需任何额外配置即可直接构建。
+    -->
+    <repositories>
+        <repository>
+            <id>project-lib-repo</id>
+            <name>项目内置依赖仓库</name>
+            <url>file:///${project.basedir}/../../lib-repo</url>
+            <snapshots>
+                <enabled>true</enabled>
+                <updatePolicy>always</updatePolicy>
+            </snapshots>
+        </repository>
+    </repositories>
+
     <distributionManagement>
         <snapshotRepository>
             <id>2643746-snapshot-a6HsOJ</id>

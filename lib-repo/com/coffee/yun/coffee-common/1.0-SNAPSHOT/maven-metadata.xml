@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<metadata modelVersion="1.1.0">
+  <groupId>com.coffee.yun</groupId>
+  <artifactId>coffee-common</artifactId>
+  <versioning>
+    <lastUpdated>20260515021147</lastUpdated>
+    <snapshot>
+      <timestamp>20260515.021147</timestamp>
+      <buildNumber>1</buildNumber>
+    </snapshot>
+    <snapshotVersions>
+      <snapshotVersion>
+        <extension>jar</extension>
+        <value>1.0-20260515.021147-1</value>
+        <updated>20260515021147</updated>
+      </snapshotVersion>
+      <snapshotVersion>
+        <extension>pom</extension>
+        <value>1.0-20260515.021147-1</value>
+        <updated>20260515021147</updated>
+      </snapshotVersion>
+    </snapshotVersions>
+  </versioning>
+  <version>1.0-SNAPSHOT</version>
+</metadata>
