@@ -14,7 +14,52 @@ mvn -version     # 应显示 Apache Maven 3.8.x 或更高
 node -v          # 应显示 v16.x 或更高
 ```
 
-如果有任何一项没有输出，请先参考 [环境搭建指南](../README.md) 完成安装。
+### 安装 JDK 17（如果 java -version 不是 17）
+
+**第一步：下载**
+
+打开 [https://adoptium.net](https://adoptium.net)，选择：
+- **Version**：`Temurin 17（LTS）`
+- **OS**：`Windows`
+- **Architecture**：`x64`（64位系统选这个）
+
+点击 **Latest release** 下载 `.msi` 安装包（约 180MB）。
+
+> Adoptium Temurin 是 Eclipse 基金会维护的免费 JDK，与 Oracle JDK 完全兼容，推荐教学使用。
+
+**第二步：安装**
+
+1. 双击 `.msi` 文件，点击 **Next**
+2. 安装路径建议保持默认（`C:\Program Files\Eclipse Adoptium\jdk-17.x.x.x-hotspot`）
+3. **关键步骤**：在 "Custom Setup" 页面，确认以下两项已勾选（默认勾选，不要取消）：
+   - `Set JAVA_HOME variable` ← 自动设置环境变量
+   - `Add to PATH` ← 让命令行能直接用 `java` 命令
+4. 点击 **Install**，等待安装完成，点击 **Finish**
+
+**第三步：验证**
+
+重新打开命令提示符（必须重新打开，旧窗口不会读取新环境变量），执行：
+
+```cmd
+java -version
+```
+
+应显示：
+```
+openjdk version "17.x.x" ...
+```
+
+**如果还是显示旧版本（多 Java 并存的情况）：**
+
+需要手动更新 `JAVA_HOME`：
+1. 右键"此电脑" → "属性" → "高级系统设置" → "环境变量"
+2. 在"系统变量"中找到 `JAVA_HOME`，双击修改值为 JDK 17 的安装目录
+   （例如：`C:\Program Files\Eclipse Adoptium\jdk-17.0.11.9-hotspot`）
+3. 在"系统变量"的 `Path` 中，将 JDK 17 的 `bin` 目录移到最前面
+   （例如：`C:\Program Files\Eclipse Adoptium\jdk-17.0.11.9-hotspot\bin`）
+4. 点击确定，**重新打开**命令提示符，再次执行 `java -version` 验证
+
+---
 
 **确认本机 MySQL 连接参数（必须提前记下来）：**
 
