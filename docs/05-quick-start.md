@@ -195,21 +195,35 @@ database:
 
 **场景二：本地 Nacos + 本地 MySQL（密码不是 123456）**
 
-直接修改 `coffee-userorder/provider/src/main/resources/application-dev.yml` 里的默认值：
+**方式一（推荐）：直接修改 yml 默认值**
+
+打开 `coffee-userorder/provider/src/main/resources/application-dev.yml`，把冒号后面的默认值换成你的实际值，IDEA 右键 → Run 直接启动：
 
 ```yaml
 database:
-  user: ${DB_USER:你的MySQL用户名}      # ← 把 root 换成你的实际用户名
+  user: ${DB_USER:你的MySQL用户名}        # ← 把 root 换成你的实际用户名
   password: ${DB_PASSWORD:你的MySQL密码}  # ← 把 123456 换成你的实际密码
   host: ${DB_HOST:localhost:3306}
   dbname: ${DB_NAME:userordertest}
 ```
 
-`coffee-expresstrack` 同理，修改它自己的 `application-dev.yml`。改完在 IDEA 里直接右键 → Run 启动即可。
+`coffee-expresstrack` 同理，修改它自己的 `application-dev.yml`。
+
+<details>
+<summary>方式二（进阶）：通过 IDEA 环境变量注入，不改文件</summary>
+
+`Run` → `Edit Configurations` → 选中启动类 → **Environment Variables**：
+```
+DB_USER=你的用户名;DB_PASSWORD=你的密码
+```
+优点：文件保持原样，不用担心误提交到 Git。
+</details>
 
 ---
 
 **场景三：本地 Nacos + 阿里云 RDS**
+
+**方式一（推荐）：直接修改 yml 默认值**
 
 修改 `application-dev.yml`，把数据库地址指向 RDS 外网地址：
 
@@ -221,17 +235,20 @@ database:
   dbname: ${DB_NAME:userordertest}
 ```
 
-改完直接在 IDEA 里右键 → Run 启动。
+<details>
+<summary>方式二（进阶）：通过 IDEA 环境变量注入，不改文件</summary>
+
+`Run` → `Edit Configurations` → **Environment Variables**：
+```
+DB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306;DB_USER=userordertest;DB_PASSWORD=你的密码
+```
+</details>
 
 ---
 
 **场景四：本地运行 + 云上 MSE Nacos + 阿里云 RDS**
 
-代码还跑在自己电脑上，但注册中心和数据库都指向云上。
-
-**最简单的方式：直接改 `application-dev.yml` 的默认值**
-
-`${VAR:默认值}` 里冒号后面就是默认值，把它换成你的实际地址，不需要设任何环境变量，直接在 IDEA 里点运行即可。
+**方式一（推荐）：直接修改 yml 默认值**
 
 `coffee-userorder/provider/src/main/resources/application-dev.yml`：
 
@@ -241,9 +258,9 @@ dubbo:
     address: ${DUBBO_REGISTRY:nacos://mse-xxx.nacos.aliyuncs.com:8848}  # ← 换成你的 MSE 地址
 
 database:
-  user: ${DB_USER:userordertest}          # ← 换成你的 RDS 用户名
-  password: ${DB_PASSWORD:你的RDS密码}    # ← 换成你的 RDS 密码
-  host: ${DB_HOST:rm-xxx.mysql.rds.aliyuncs.com:3306}  # ← 换成你的 RDS 外网地址
+  user: ${DB_USER:userordertest}                              # ← 换成你的 RDS 用户名
+  password: ${DB_PASSWORD:你的RDS密码}                        # ← 换成你的 RDS 密码
+  host: ${DB_HOST:rm-xxx.mysql.rds.aliyuncs.com:3306}        # ← 换成你的 RDS 外网地址
   dbname: ${DB_NAME:userordertest}
 ```
 
@@ -256,9 +273,26 @@ spring:
     #                                                                               ↑ 换成你的 MSE 地址
 ```
 
-改完直接在 IDEA 里右键 → Run，无需任何命令行参数。
+<details>
+<summary>方式二（进阶）：通过 IDEA 环境变量注入，不改文件</summary>
 
-> **注意：** 直接改默认值的方式要小心别把修改提交到 Git，否则其他同学 clone 下来会连到你的云上资源。建议改完测试后用 `git checkout -- .` 还原，或者养成习惯用 IDEA Environment Variables 方式替代。
+`Run` → `Edit Configurations` → **Environment Variables**：
+```
+NACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848;DUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848;DB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306;DB_USER=userordertest;DB_PASSWORD=你的密码
+```
+
+或命令行启动：
+```bash
+java -DNACOS_ADDR=mse-xxx.nacos.aliyuncs.com:8848 \
+     -DDUBBO_REGISTRY=nacos://mse-xxx.nacos.aliyuncs.com:8848 \
+     -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 \
+     -DDB_USER=userordertest \
+     -DDB_PASSWORD=你的密码 \
+     -jar coffee-userorder-provider-1.0-SNAPSHOT.jar
+```
+</details>
+
+> **注意：** 直接改 yml 默认值后，记得不要 git commit，否则你的密码和云上地址会提交到 Git。测试完成后用 `git checkout -- .` 还原文件。
 
 ---
 
