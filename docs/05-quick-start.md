@@ -540,7 +540,30 @@ mvn -version
 
 ---
 
-### 错误 2：数据库连接失败 `Communications link failure`
+### 错误 2：Navicat/数据库工具报 `1251 - Client does not support authentication protocol`
+
+**含义**：Navicat 版本较老，不支持 MySQL 8.0 默认的 `caching_sha2_password` 认证协议。MySQL 8.0 把默认认证方式从旧的 `mysql_native_password` 改成了新协议，老版客户端工具不认识新协议就会报这个错。
+
+**解决方法**：用命令行把 root 账号的认证方式改回旧协议：
+
+```cmd
+mysql -u root -p
+```
+
+进入后执行（把 `你的密码` 替换为你安装时设置的实际密码）：
+
+```sql
+ALTER USER 'root'@'localhost' IDENTIFIED WITH mysql_native_password BY '你的密码';
+FLUSH PRIVILEGES;
+```
+
+执行完关闭 Navicat 重新连接即可。
+
+> **为什么不升级 Navicat？** 新版 Navicat 支持新协议，但需要付费授权。改认证方式是更快的教学捷径，不影响本项目任何功能。
+
+---
+
+### 错误 3：数据库连接失败 `Communications link failure`
 
 **含义**：连不上 MySQL。
 
@@ -551,7 +574,7 @@ mvn -version
 
 ---
 
-### 错误 3：`Connection refused`（端口连不上某个服务）
+### 错误 4：`Connection refused`（端口连不上某个服务）
 
 **排查**：
 1. Nacos 是否在运行：访问 [http://localhost:8848/nacos](http://localhost:8848/nacos)
@@ -560,7 +583,7 @@ mvn -version
 
 ---
 
-### 错误 4：`No provider available for the service`
+### 错误 5：`No provider available for the service`
 
 **含义**：Dubbo 在 Nacos 找不到服务提供者，通常是启动顺序问题。
 
@@ -571,7 +594,7 @@ mvn -version
 
 ---
 
-### 错误 5：`Could not find artifact` 或 Maven 找不到内部依赖
+### 错误 6：`Could not find artifact` 或 Maven 找不到内部依赖
 
 **含义**：Step 4 的 `mvn clean install` 没有按顺序执行完。
 
@@ -579,7 +602,7 @@ mvn -version
 
 ---
 
-### 错误 6：`Unknown column` 或 `Table doesn't exist`
+### 错误 7：`Unknown column` 或 `Table doesn't exist`
 
 **含义**：数据库表结构不对，或数据库没初始化。
 
@@ -587,7 +610,7 @@ mvn -version
 
 ---
 
-### 错误 7：`找不到或无法加载主类 MavenWrapperMain`
+### 错误 8：`找不到或无法加载主类 MavenWrapperMain`
 
 **含义**：用了 `mvnw` 而不是 `mvn`，Wrapper 尝试联网下载组件失败。
 
@@ -595,7 +618,7 @@ mvn -version
 
 ---
 
-### 错误 8：端口被占用 `Address already in use`
+### 错误 9：端口被占用 `Address already in use`
 
 **Windows 查找并释放端口（以 7001 为例）：**
 
@@ -607,7 +630,7 @@ taskkill /PID 12345 /F
 
 ---
 
-### 错误 9：前端 `npm install` 很慢或失败
+### 错误 10：前端 `npm install` 很慢或失败
 
 ```cmd
 npm config set registry https://registry.npmmirror.com
@@ -616,7 +639,7 @@ npm install
 
 ---
 
-### 错误 10：前端页面显示正常但查询无数据
+### 错误 11：前端页面显示正常但查询无数据
 
 **排查**：
 1. 先直接访问后端接口 `http://localhost:8005/hello/44556677`，确认后端本身正常
