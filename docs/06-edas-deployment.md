@@ -1,203 +1,187 @@
-# EDAS ECS 集群部署指南
+# 第 11 章：部署到阿里云 EDAS
 
-> 本文档说明如何将本项目的微服务部署到阿里云 **EDAS（企业级分布式应用服务）** ECS 集群，并在 EDAS 控制台实现 Dubbo 服务治理（服务查询、调用链追踪等）。
-
----
-
-## 目录
-
-1. [EDAS 是什么，为什么用它](#1-edas-是什么为什么用它)
-2. [前置条件](#2-前置条件)
-3. [购买 MSE Nacos 实例](#3-购买-mse-nacos-实例)
-4. [创建绑定 MSE 的微服务空间](#4-创建绑定-mse-的微服务空间)
-5. [创建 EDAS ECS 集群并导入服务器](#5-创建-edas-ecs-集群并导入服务器)
-6. [代码配置说明](#6-代码配置说明)
-7. [打包构建](#7-打包构建)
-8. [在 EDAS 部署应用](#8-在-edas-部署应用)
-9. [验证 Dubbo 服务治理](#9-验证-dubbo-服务治理)
-10. [工作原理详解](#10-工作原理详解)
-11. [常见问题排查](#11-常见问题排查)
+> **本章目标**：把第 05 章在本地跑通的微服务项目，迁移到阿里云上运行，并通过 EDAS 控制台观察 Dubbo 服务治理效果。
 
 ---
 
-## 1. EDAS 是什么，为什么用它
+## 开始前：你需要准备好什么
 
-**EDAS**（Enterprise Distributed Application Service）是阿里云提供的微服务应用托管平台，在普通 ECS 部署的基础上提供：
+**硬性前置条件（缺一不可）：**
 
-| 功能 | 说明 |
-|------|------|
-| 应用生命周期管理 | 在控制台一键部署、启动、停止、回滚 |
-| Dubbo 服务治理 | 可视化查看已注册的 Dubbo 服务及提供者列表 |
-| 调用链追踪 | 追踪跨服务的请求链路，快速定位性能瓶颈 |
-| 服务鉴权 | 控制哪些服务可以互相调用 |
-| 金丝雀发布 | 将新版本先推送给少量实例，验证无误后全量发布 |
-
-**本项目使用 EDAS 的主要目的：** 演示 Dubbo 服务治理页面，展示微服务注册与发现的可视化效果。
+- [ ] 第 05 章已完成——本地能启动三个服务并正常访问前端页面
+- [ ] 阿里云账号已注册并完成**实名认证**（部分资源需要认证才能购买）
+- [ ] 已购买 **ECS 实例**（推荐：2 核 4 GB，Linux，与后续所有资源选同一地域同一 VPC）
+- [ ] 已购买 **RDS MySQL 8.0**（推荐：1 核 2 GB 基础版，同地域同 VPC）
+- [ ] 本地安装了 Maven 3.8+（第 05 章已验证）
 
 ---
 
-## 2. 前置条件
+## 本章做的事情，一句话概括
 
-### 2.1 ECS 安全组配置
+| 本地 | 云上替换为 |
+|------|-----------|
+| 本地 MySQL | RDS（云上托管数据库） |
+| 本地 Nacos | MSE Nacos（云上托管注册中心） |
+| 本地启动 Spring Boot | EDAS 部署（应用托管平台） |
 
-EDAS Agent 需要通过以下端口向阿里云汇报服务元数据，**必须在安全组中放通出方向**：
-
-| 端口 | 协议 | 方向 | 说明 |
-|------|------|------|------|
-| 8442 | TCP | 出方向 | EDAS Agent 注册通信 |
-| 8443 | TCP | 出方向 | EDAS Agent 注册通信 |
-| 8883 | TCP | 出方向 | EDAS Agent 服务元数据上报 |
-
-操作路径：**ECS 控制台 → 安全组 → 配置规则 → 出方向 → 手动添加**
-
-> 目标 IP 填 `0.0.0.0/0`，优先级填 `1`。
-
-### 2.2 网络要求
-
-- MSE Nacos 实例与 ECS 必须在同一 **VPC**（专有网络）和**地域**
-- ECS 能访问阿里云内网网段 `100.100.0.0/16`（默认放通，无需额外配置）
-
-### 2.3 软件要求
-
-| 工具 | 版本 |
-|------|------|
-| JDK | 17 |
-| Maven | 3.8+ |
+三个服务的代码**完全不改**，只通过环境变量告诉它们连哪里。这就是云原生"环境无关"的核心思想。
 
 ---
 
-## 3. 购买 MSE Nacos 实例
+## 什么是 VPC？为什么反复提到它
 
-> **MSE Nacos** 是阿里云全托管的 Nacos 服务，阿里云负责高可用和运维，无需自行搭建 Nacos 集群。
+**VPC（专有网络）** 是你在阿里云上的私有局域网。你购买的 ECS、RDS、MSE Nacos 只要在同一个 VPC 里，就可以互相走内网通信——速度快、不计费。
 
-**为什么 EDAS 治理必须用 MSE Nacos？**
+**关键规则：本章涉及的所有资源，必须在同一地域、同一 VPC。**
 
-EDAS 内置注册中心（旧版 EDAS 注册配置中心）仅兼容 Dubbo 2.x 的元数据格式。本项目使用 Dubbo 3.x，只有 MSE Nacos 才能在 EDAS 治理页面正确展示服务信息。
+如果你已经有了 ECS，后续创建 RDS、MSE Nacos 时，地域和 VPC 都选和 ECS 一样的。
+
+---
+
+## Step 1：初始化云上数据库（RDS）
+
+### 1.1 创建数据库和账号
+
+进入 **RDS 控制台** → 找到你的实例 → 左侧菜单：
+
+**① 创建数据库**（做两次，分别创建订单库和快递库）
+
+- 数据库名：`userordertest`，字符集：`utf8mb4`
+- 数据库名：`expresstracktest`，字符集：`utf8mb4`
+
+**② 创建账号**（左侧"账号管理" → 创建账号）
+
+| 配置项 | 填写值 |
+|--------|--------|
+| 账号名 | `userordertest` |
+| 账号类型 | 普通账号 |
+| 密码 | 自定义，记住它 |
+| 授权数据库 | 同时授权 `userordertest` 和 `expresstracktest`，权限选"读写" |
+
+### 1.2 初始化表结构
+
+RDS 不能直接用命令行连，用本地 **MySQL Workbench** 来连接：
+
+1. Workbench → 新建连接
+2. Hostname 填 RDS 的**外网地址**（RDS 控制台 → 实例详情 → 连接信息 → 外网地址）
+3. Port：`3306`，Username：`userordertest`，Password：你刚设置的密码
+4. 连上后，依次执行项目 `sql/` 目录下的两个脚本：
+   - `sql/userorder.sql` → 在 `userordertest` 库执行
+   - `sql/expresstrack.sql` → 在 `expresstracktest` 库执行
+
+**确认**：在 Workbench 里能看到两个库下面都有表，说明初始化成功。
+
+> **注意**：用外网地址只是为了从本机初始化数据。ECS 上的应用连数据库用**内网地址**（RDS 控制台 → 连接信息 → 内网地址），内网更快且不计流量费。
+
+---
+
+## Step 2：购买 MSE Nacos（云上注册中心）
+
+本地开发用的是自己启动的 Nacos。云上用 **MSE Nacos**——阿里云全托管，不需要自己运维。
+
+**为什么不能继续用本地 Nacos？**  
+ECS 上的服务无法访问你笔记本上的 `127.0.0.1:8848`，而且本地 Nacos 关机就消失了，不适合生产。
+
+**为什么用 MSE Nacos 而不是在 ECS 上自己装 Nacos？**  
+EDAS 服务治理页面只识别 MSE Nacos 里的服务数据，自建 Nacos 无法接入 EDAS 治理功能。
 
 ### 操作步骤
 
 1. 控制台搜索 **微服务引擎 MSE** → 进入
-2. 左侧菜单：**注册配置中心 → 实例列表 → 创建实例**
-3. 关键配置：
+2. 左侧：**注册配置中心 → 实例列表 → 创建实例**
 
-   | 配置项 | 填写值 |
-   |--------|--------|
-   | 引擎类型 | **Nacos** |
-   | 版本 | **2.x** |
-   | 规格 | 开发测试版（教学用最低规格） |
-   | 地域 | 与 ECS 相同地域（如华东1 杭州） |
-   | **VPC** | 与 ECS 相同 VPC |
-   | 交换机 | 与 ECS 相同交换机 |
+| 配置项 | 填写值 |
+|--------|--------|
+| 引擎类型 | **Nacos** |
+| 版本 | **2.x** |
+| 规格 | 开发测试版（最便宜，教学够用） |
+| 地域 | 与 ECS 相同地域 |
+| VPC | 与 ECS 相同 VPC |
+| 交换机 | 与 ECS 相同交换机 |
 
-4. 创建完成后，进入实例详情，记录**内网访问地址**（格式：`mse-xxxxxxxx-nacos-ans.mse.aliyuncs.com:8848`）
+3. 创建完成后，进入实例详情 → 记录**内网访问地址**
 
-> 内网地址仅在同 VPC 内可访问，阿里云 ECS 通过内网连接，速度快且不收流量费。
+格式类似：`mse-xxxxxxxx-p.nacos-ans.mse.aliyuncs.com:8848`
+
+**确认**：实例状态显示"运行中"。
 
 ---
 
-## 4. 创建绑定 MSE 的微服务空间
+## Step 3：搭建 EDAS 环境（三步，顺序不能乱）
 
-**微服务空间**决定了该空间内所有应用使用哪种注册中心。**创建后不可更改注册中心类型**，需谨慎选择。
+EDAS 有三层结构，必须按顺序创建：**微服务空间 → ECS 集群 → 应用**。
 
-### 操作步骤
+> **一次性设置**：微服务空间和集群创建后不需要再动，后续只操作"应用"层。
+
+### 3.1 配置 ECS 安全组（先做，否则 EDAS Agent 无法工作）
+
+EDAS Agent 需要从 ECS 主动向阿里云上报数据，必须在安全组放通**出方向**：
+
+**ECS 控制台 → 安全组 → 配置规则 → 出方向 → 手动添加**
+
+| 端口 | 协议 | 目标 IP | 说明 |
+|------|------|---------|------|
+| 8442 | TCP | 0.0.0.0/0 | EDAS Agent 通信 |
+| 8443 | TCP | 0.0.0.0/0 | EDAS Agent 通信 |
+| 8883 | TCP | 0.0.0.0/0 | 服务元数据上报 |
+
+### 3.2 创建微服务空间
+
+微服务空间决定了里面所有应用使用哪个注册中心。**创建后注册中心类型不可更改**，选错了只能删掉重建。
 
 1. **EDAS 控制台** → **资源管理 → 微服务空间 → 创建微服务空间**
-2. 关键配置：
 
-   | 配置项 | 填写值 |
-   |--------|--------|
-   | 空间名称 | `coffee-prod`（自定义，便于识别） |
-   | **注册中心类型** | **MSE Nacos** |
-   | MSE Nacos 实例 | 选择第 3 步创建的实例 |
+| 配置项 | 填写值 |
+|--------|--------|
+| 空间名称 | `coffee-prod` |
+| 注册中心类型 | **MSE Nacos** |
+| MSE Nacos 实例 | 选择 Step 2 创建的实例 |
 
-3. 创建完成后，在微服务空间列表确认该空间的"注册中心类型/ID"列已显示 MSE 实例信息
+**确认**：空间列表里"注册中心类型"列显示 MSE 实例信息（不是 `cn-hangzhou`）。
 
----
+### 3.3 创建 ECS 集群并导入服务器
 
-## 5. 创建 EDAS ECS 集群并导入服务器
+1. **EDAS 控制台** → **资源管理 → EDAS ECS 集群 → 创建集群**
 
-### 5.1 创建集群
+| 配置项 | 填写值 |
+|--------|--------|
+| 集群名称 | `coffeecluster` |
+| **微服务空间** | 选择 `coffee-prod`（上一步创建的） |
+| VPC | 与 ECS 相同的 VPC |
 
-1. **EDAS 控制台** → **资源管理 → EDAS ECS集群 → 创建集群**
-2. 关键配置：
+> **集群的微服务空间创建后不可变更。**
 
-   | 配置项 | 填写值 |
-   |--------|--------|
-   | 集群名称 | `coffeecluster`（自定义） |
-   | **微服务空间** | 选择第 4 步创建的 `coffee-prod` |
-   | VPC | 与 ECS 相同的 VPC |
+2. 进入集群详情 → **添加 ECS** → 勾选你的 ECS 实例 → 确认
 
-   > **微服务空间在此处选定**，集群创建后不可变更。
+3. 等待 3-5 分钟，EDAS 自动在 ECS 上安装 Agent
 
-### 5.2 导入 ECS
-
-1. 进入集群详情 → **添加ECS**
-2. 从列表中勾选目标 ECS 实例（同 VPC 内可见）
-3. 导入完成，等待 EDAS Agent 自动安装（约 3-5 分钟）
-4. ECS 状态变为"运行中"表示 Agent 安装成功
+**确认**：ECS 状态变为"运行中"，说明 Agent 安装成功。
 
 ---
 
-## 6. 代码配置说明
+## Step 4：理解代码是怎么区分本地和云上的
 
-本项目已预配置好 EDAS 部署所需的所有参数，**无需额外修改代码**，以下是配置说明，便于理解各文件的作用。
+**在打包之前，先理解这个机制**，否则后面容易配错。
 
-### `application.yml`（主配置，已配置）
+### ENV 环境变量：本地/云上的切换开关
+
+打开任意一个微服务的 `src/main/resources/application.yml`，你会看到：
 
 ```yaml
 spring:
   profiles:
-    active: ${ENV:dev}   # 读取名为 ENV 的环境变量，默认值是 dev
-
-dubbo:
-  application:
-    serialize-check-status: WARN
-    service-discovery:
-      migration: FORCE_INTERFACE   # Dubbo 3.x 使用接口级注册，兼容 EDAS 治理页面
-  registry:
-    address: ${DUBBO_REGISTRY:nacos://127.0.0.1:8848}   # 本地默认连接本地 Nacos
+    active: ${ENV:dev}
 ```
 
----
+`${ENV:dev}` 的意思：读取名为 `ENV` 的 JVM 属性，如果没有就用 `dev`。
 
-#### 重点：`-DENV=prod` 是什么，在哪里设置，为什么必须设置
+- **本地启动**：没有设置 ENV → 默认 `dev` → 加载 `application-dev.yml`（连本地 MySQL、本地 Nacos）
+- **EDAS 部署**：在控制台 JVM 参数里填 `-DENV=prod` → 加载 `application-prod.yml`（连 RDS、Nacos 由 EDAS 自动接管）
 
-**它是什么：**
-
-`${ENV:dev}` 的意思是："读取 JVM 系统属性 `ENV` 的值，如果没有设置就用 `dev` 作为默认值"。
-
-- `ENV=dev` → Spring Boot 加载 `application-dev.yml`（连接本地 Nacos 和本地数据库）
-- `ENV=prod` → Spring Boot 加载 `application-prod.yml`（连接云上 RDS，Nacos 由 EDAS Agent 接管）
-
-**如果部署到 EDAS 时忘了设置 `-DENV=prod`，会发生什么：**
-
-```
-服务启动 → ENV 没有值 → 默认加载 application-dev.yml
-→ 尝试连接 localhost:8848（本地 Nacos）
-→ 云上服务器没有本地 Nacos → 连接失败 → 服务启动报错
-```
-
-所以这个参数**至关重要**，是本地和云上环境的切换开关。
-
-**在哪里设置：**
-
-在 EDAS 控制台创建或部署应用时，有一个"**JVM 参数**"输入框，填入：
-
-```
--Xms128m -Xmx256m -DENV=prod
-```
-
-`-DENV=prod` 就是通过这个输入框传给 Java 进程的。`-D` 是 Java 的固定语法，表示"设置一个 JVM 系统属性"，`ENV=prod` 就是属性名和值。
-
-> 详细截图操作见第 8 步"在 EDAS 部署应用"中的配置表格。
-
----
-
-**`FORCE_INTERFACE` 的作用：** 强制 Dubbo 3.x 使用与 Dubbo 2.x 兼容的接口级注册格式，使 EDAS 治理页面能够正确识别和展示服务信息。
-
-### `application-prod.yml`（生产环境配置，已配置）
+### 为什么 application-prod.yml 里没有写 Nacos 地址？
 
 ```yaml
+# application-prod.yml
 # Dubbo 注册中心由 EDAS Agent 自动接管，无需在此配置地址
 
 database:
@@ -207,177 +191,190 @@ database:
   dbname: ${DB_NAME:userordertest}
 ```
 
-> 生产环境不需要写 Dubbo registry 地址——EDAS Agent 在字节码层拦截 Nacos 连接，自动重定向到微服务空间绑定的 MSE Nacos 实例。
+EDAS 部署时会在 JVM 里注入一个 Agent（类似 Java 探针），Agent 在字节码层拦截所有 Nacos 连接请求，无论代码里写了什么地址，都会重定向到微服务空间绑定的 MSE Nacos。所以 prod 配置里不需要写 Nacos 地址——写了也会被覆盖。
 
-### `application-dev.yml`（开发环境配置，本地使用）
+### 数据库地址怎么传进去？
 
-```yaml
-dubbo:
-  registry:
-    address: ${DUBBO_REGISTRY:nacos://127.0.0.1:8848}   # 默认本地 Nacos，可通过环境变量切换
+`application-prod.yml` 里的 `DB_HOST` 默认是占位符 `rm-xxxxxxxxx`，**部署时必须通过 JVM 参数覆盖**：
 
-database:
-  user: ${DB_USER:root}
-  password: ${DB_PASSWORD:123456}
-  host: ${DB_HOST:localhost:3307}   # 注意默认端口 3307，与 MySQL 常见默认值 3306 不同
-  dbname: ${DB_NAME:userordertest}  # expresstrack 服务对应 expresstracktest
+```
+-DDB_HOST=你的RDS内网地址:3306
+-DDB_USER=userordertest
+-DDB_PASSWORD=你的RDS密码
 ```
 
----
-
-## 7. 打包构建
-
-### 7.1 前置：确保内部依赖可用
-
-本项目的 `coffee-common`、`coffee-userorder-api`、`coffee-expresstrack-api` 是项目内部模块，不在 Maven Central。构建前需要确保 Maven 能找到它们。
-
-**请先完成 [阿里云服务详细配置指南 § 6 制品库](./01-aliyun-guide.md#6-阿里云制品库maven-私服) 中的配置**，将内部依赖发布到阿里云制品库并在 `settings.xml` 中配置下载地址，Maven 在构建时就能从制品库自动拉取。
+在 EDAS 部署页面的"JVM 参数"输入框里填写这些参数即可。
 
 ---
 
-> **可选替代方案：使用项目内置 `lib-repo/`**
->
-> 如果你暂时不想配置阿里云制品库，或只是在本地运行学习，项目已将编译好的内部 JAR 内置在 `lib-repo/` 目录中并随 GitHub 代码一起分发。相关 `pom.xml` 已预先配置好，Maven 会自动从该目录读取，**无需任何手动操作**，clone 后直接构建即可。
->
-> `lib-repo/` 通过 `file://` 协议指向本地磁盘上的相对路径，每个人用的都是自己克隆下来的那份，不依赖任何网络服务，**断网环境下同样可以构建**。
->
-> **lib-repo 的两种失效场景：**
-> - `settings.xml` 里有 `<mirror mirrorOf="*">`：mirror 会拦截所有仓库请求，包括 `lib-repo/`，内部 JAR 必须实际上传到制品库才能找到
-> - 已配置制品库但内部 JAR 未上传（未执行 `mvn deploy`）+ 配了 mirror：构建报 `Could not find artifact`，需先完成 [§ 6.4 上传 JAR](./01-aliyun-guide.md#64-上传-jar-到私服)
->
-> 如果没有配 mirror，只是在 `<profile>` 里加了仓库地址，则无论制品库里有没有内部 JAR，`lib-repo/` 都能正常兜底。
->
-> 注意：EDAS 云端构建（在 EDAS 控制台上传 JAR 包）依赖制品库，`lib-repo/` 仅适用于本地开发场景。
+## Step 5：打包应用
 
----
+在本地项目根目录，打开命令行，**按顺序执行**（和第 05 章 Step 3 的 install 顺序一样）：
 
-### 7.2 打包微服务 JAR
+```cmd
+rem 先安装公共依赖（如果第 05 章已经执行过，可跳过）
+cd coffee-common
+mvn clean install -DskipTests
 
-```bash
-# 打包订单服务（产物：coffee-userorder/provider/target/coffee-userorder-provider-1.0-SNAPSHOT.jar）
-cd coffee-userorder/provider
+cd ..\coffee-userorder\api
+mvn clean install -DskipTests
+
+cd ..\..\coffee-expresstrack\api
+mvn clean install -DskipTests
+```
+
+然后分别打包三个服务：
+
+```cmd
+rem 打包订单服务
+cd ..\..\coffee-userorder\provider
 mvn clean package -DskipTests
 
-# 打包快递服务（产物：coffee-expresstrack/provider/target/coffee-expresstrack-provider-1.0-SNAPSHOT.jar）
-cd ../../coffee-expresstrack/provider
+rem 打包快递服务
+cd ..\..\coffee-expresstrack\provider
 mvn clean package -DskipTests
 
-# 打包 API 网关（产物：coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar）
-cd ../../coffee-app
+rem 打包 API 网关
+cd ..\..\coffee-app
 mvn clean package -DskipTests
 ```
 
----
+打包完成后，产物在各模块的 `target/` 目录：
 
-## 8. 在 EDAS 部署应用
+| 服务 | JAR 文件路径 |
+|------|------------|
+| 订单服务 | `coffee-userorder/provider/target/coffee-userorder-provider-1.0-SNAPSHOT.jar` |
+| 快递服务 | `coffee-expresstrack/provider/target/coffee-expresstrack-provider-1.0-SNAPSHOT.jar` |
+| API 网关 | `coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar` |
 
-### 8.1 部署订单服务
-
-1. **EDAS 控制台** → **应用管理 → 创建应用**
-2. 关键配置：
-
-   | 配置项 | 填写值 |
-   |--------|--------|
-   | 应用名称 | `userorder` |
-   | 部署环境 | ECS集群 → 选择 `coffeecluster` |
-   | 部署包类型 | JAR 包 |
-   | 部署包 | 上传 `coffee-userorder/provider/target/provider-1.0-SNAPSHOT.jar` |
-   | **JVM 参数** | `-Xms128m -Xmx256m -DENV=prod -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 -DDB_USER=userordertest -DDB_PASSWORD=你的RDS密码` |
-
-   > - `-DENV=prod`：激活 `application-prod.yml`，以生产模式运行
-   > - `-DDB_HOST / -DDB_USER / -DDB_PASSWORD`：注入 RDS 连接信息，覆盖 `application-prod.yml` 中的占位符默认值。**不传这三个参数，服务会尝试连接占位符地址 `rm-xxxxxxxxx`，启动即报错**
-
-3. 点击"部署"，等待应用状态变为**运行中**
-
-### 8.2 部署快递服务
-
-同上，应用名称改为 `expresstrack`，JAR 包上传 `coffee-expresstrack/provider/target/provider-1.0-SNAPSHOT.jar`。  
-JVM 参数中 `-DDB_HOST`、`-DDB_USER`、`-DDB_PASSWORD` 与订单服务保持一致，**无需修改数据库名**（`DB_NAME` 默认为 `expresstracktest`，已在 `application-prod.yml` 中单独配置）。
+**确认**：每个 `mvn` 命令最后显示 `BUILD SUCCESS`。
 
 ---
 
-## 9. 验证 Dubbo 服务治理
+## Step 6：在 EDAS 部署三个服务
 
-### 9.1 查看服务列表
+**EDAS 控制台** → **应用管理 → 创建应用**
 
-1. **EDAS 控制台** → **微服务治理 → Dubbo → 服务查询**
-2. 顶部"所属微服务空间"选择 `coffee-prod`
-3. 服务列表中应出现：
-   - `com.coffee.yun.userorder.service.OrderService`（或其他接口名）
-   - `com.coffee.yun.expresstrack.service.ExpressTrackService`
+### 6.1 部署订单服务
 
-4. 点击服务名 → "提供者"标签，可以看到提供该服务的 ECS 实例 IP
+| 配置项 | 填写值 |
+|--------|--------|
+| 应用名称 | `userorder` |
+| 部署环境 | ECS 集群 → 选 `coffeecluster` |
+| 部署包类型 | JAR 包 |
+| 部署包 | 上传 `coffee-userorder/provider/target/coffee-userorder-provider-1.0-SNAPSHOT.jar` |
+| **JVM 参数** | 见下方 |
 
-### 9.2 查看应用状态
-
-**EDAS 控制台** → **应用管理** → 点击应用名 → **基本信息**：
-- 实例总数与运行中实例数相同，且健康检查显示"运行中"表示部署成功
-- 点击"查看日志"可以看到 Spring Boot 启动日志
-
----
-
-## 10. 工作原理详解
+**JVM 参数**（把 RDS 内网地址和密码替换成你的实际值）：
 
 ```
-本地开发流程：
-应用启动（ENV=dev）
-  └─ 加载 application-dev.yml
-  └─ Dubbo 连接本地 Nacos（127.0.0.1:8848）
-  └─ 服务注册到本地 Nacos
-
-EDAS 部署流程：
-应用启动（-DENV=prod）
-  └─ EDAS 自动注入 ARMS/Pandora Agent（-javaagent）
-  └─ Agent 在字节码层拦截所有 Nacos 连接请求
-  └─ 无论代码里写了什么 Nacos 地址，Agent 都重定向到
-       └─ 微服务空间（coffee-prod）绑定的 MSE Nacos 内网地址
-  └─ Dubbo 以 FORCE_INTERFACE 模式完成接口级注册
-  └─ EDAS 治理页面从 MSE Nacos 读取服务元数据 → 展示服务列表
+-Xms128m -Xmx256m -DENV=prod -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 -DDB_USER=userordertest -DDB_PASSWORD=你的RDS密码
 ```
 
-**关键设计决策：**
+> ⚠️ 这里填的是 RDS **内网地址**，不是外网地址。内网地址在 RDS 控制台 → 实例详情 → 连接信息里找。
 
-- **为什么 `application-prod.yml` 不写 registry 地址？** EDAS Agent 在字节码层接管注册中心连接，写了也会被覆盖，不如保持配置整洁，明确注释说明由 Agent 接管。
-- **为什么需要 `FORCE_INTERFACE`？** Dubbo 3.x 默认使用应用级注册（Application-Level Service Discovery），注册的是应用元数据，EDAS 治理 API 无法解析。`FORCE_INTERFACE` 强制使用接口级注册，EDAS 能直接读取到每个 Dubbo 接口的提供者信息。
+点击"部署"，等待状态变为**运行中**。
 
----
+### 6.2 部署快递服务
 
-## 11. 常见问题排查
+同上，配置如下：
 
-### Q：EDAS 服务查询页面"没有数据"
+| 配置项 | 填写值 |
+|--------|--------|
+| 应用名称 | `expresstrack` |
+| 部署包 | `coffee-expresstrack/provider/target/coffee-expresstrack-provider-1.0-SNAPSHOT.jar` |
+| **JVM 参数** | 与订单服务完全相同（数据库名无需改，`application-prod.yml` 里已为快递服务单独配置 `expresstracktest`） |
 
-按以下顺序排查：
+### 6.3 部署 API 网关
 
-1. **确认微服务空间** — 服务查询页面顶部"所属微服务空间"是否选择的是绑定 MSE Nacos 的空间（如 `coffee-prod`），而不是默认的 `cn-hangzhou`（EDAS注册配置中心）
+| 配置项 | 填写值 |
+|--------|--------|
+| 应用名称 | `coffee-app` |
+| 部署包 | `coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar` |
+| **JVM 参数** | `-Xms128m -Xmx256m -DENV=prod -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 -DDB_USER=userordertest -DDB_PASSWORD=你的RDS密码` |
 
-2. **确认集群所属空间** — EDAS ECS 集群详情页的"微服务空间"字段是否为 `coffee-prod`（而非 `cn-hangzhou`）。如果是 `cn-hangzhou`，该集群使用 EDAS 内置注册中心，与 Dubbo 3.x 不兼容，需重建集群。
+> 部署顺序建议：先部署 `userorder` 和 `expresstrack`（提供者），再部署 `coffee-app`（消费者）。顺序错了服务也能启动，但日志里会出现短暂的"找不到服务提供者"警告。
 
-3. **确认 JVM 参数** — 应用的 JVM 参数是否包含 `-DENV=prod`，缺少此参数会加载 `application-dev.yml`，导致服务注册到本地 Nacos 而不是 MSE Nacos
-
-4. **确认安全组** — ECS 安全组出方向是否放通了 8442、8443、8883 端口
-
-5. **等待时间** — 应用首次部署后服务元数据上报约有 30 秒延迟，刷新页面再试
-
----
-
-### Q：应用启动报错 `Unable to connect to Nacos`
-
-检查 MSE Nacos 实例与 ECS 是否在同一 VPC。不同 VPC 之间无法直接内网通信。
+**确认**：三个应用的状态都变为**运行中**。点进任意一个 → "查看日志"，能看到 Spring Boot 的启动日志，末尾出现 `Started ... in X seconds` 表示成功。
 
 ---
 
-### Q：EDAS 控制台导入 ECS 时找不到目标实例
+## Step 7：验证 Dubbo 服务治理
 
-ECS 必须与 EDAS ECS 集群在同一地域（如都在华东1杭州）和同一 VPC 才会出现在列表中。
+这是本章的核心演示目标。
+
+**EDAS 控制台** → **微服务治理 → Dubbo → 服务查询**
+
+1. 页面顶部"所属微服务空间"选择 `coffee-prod`
+2. 服务列表中应出现订单和快递相关的 Dubbo 接口名
+3. 点击任意服务名 → "提供者"标签，可以看到提供该服务的 ECS 实例 IP
+
+**这就是 Dubbo 服务治理的效果**：哪台机器提供了哪个服务，一目了然。
 
 ---
 
-### Q：集群无法切换微服务空间
+## 工作原理：本地 vs EDAS 的区别
 
-EDAS ECS 集群创建后微服务空间不可修改。如果建集群时误选了错误空间（如默认的 `cn-hangzhou`），需要：
-1. 删除集群（先删应用，再删集群）
-2. 重新创建集群，在"微服务空间"处选择绑定 MSE Nacos 的空间
+```
+本地开发：
+  Spring Boot 启动（ENV=dev）
+    → 加载 application-dev.yml
+    → 自己连接 localhost:8848 Nacos
+    → 自己连接 localhost:3306 MySQL
+
+EDAS 部署：
+  Spring Boot 启动（-DENV=prod，由 JVM 参数注入）
+    → 加载 application-prod.yml
+    → EDAS 注入的 Agent 拦截 Nacos 连接
+    → 自动重定向到微服务空间的 MSE Nacos
+    → 通过 -DDB_HOST 等参数连接 RDS
+```
+
+代码一行没改，只换了配置和运行环境——这就是"环境无关"的 12-Factor 应用原则。
 
 ---
 
-[← 返回主文档](../README.md) | [阿里云配置指南](01-aliyun-guide.md)
+## 常见问题排查
+
+### Q：EDAS 服务查询页面显示"没有数据"
+
+按顺序检查：
+
+1. **页面顶部微服务空间**是否选的是 `coffee-prod`（不是默认的 `cn-hangzhou`）
+2. **集群所属空间**：EDAS ECS 集群详情 → 确认"微服务空间"字段是 `coffee-prod`。如果是 `cn-hangzhou`，需删集群重建（不可修改）
+3. **JVM 参数**：应用的 JVM 参数是否包含 `-DENV=prod`
+4. **安全组**：ECS 安全组出方向是否放通了 8442、8443、8883 端口
+5. **等一等**：首次部署后服务元数据上报有约 30 秒延迟，刷新再试
+
+---
+
+### Q：应用日志报 `Unable to connect to Nacos` 或 Nacos 连接失败
+
+MSE Nacos 实例与 ECS 不在同一 VPC，内网无法互通。检查两者的 VPC 设置是否一致。
+
+---
+
+### Q：应用日志报数据库连接失败
+
+- 检查 JVM 参数里的 `-DDB_HOST` 是否填的是 RDS **内网地址**（不是外网地址）
+- 检查 RDS 账号 `userordertest` 是否已授权对应数据库的读写权限
+- 检查 RDS 白名单是否包含 ECS 的内网 IP（RDS 控制台 → 数据安全性 → 白名单）
+
+---
+
+### Q：导入 ECS 时列表里找不到我的 ECS
+
+ECS 必须与 EDAS 集群在同一**地域**和同一 **VPC** 才会出现在列表中。
+
+---
+
+### Q：集群创建后发现微服务空间选错了
+
+集群的微服务空间创建后不可修改。需要：
+1. 先删掉集群内的所有应用
+2. 删掉集群
+3. 重新建集群，这次选正确的微服务空间（`coffee-prod`）
+
+---
+
+[← 返回主文档](../README.md) | [快速启动指南（本地）](05-quick-start.md)
