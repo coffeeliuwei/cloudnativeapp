@@ -214,11 +214,13 @@ database:
 ```yaml
 dubbo:
   registry:
-    address: nacos://127.0.0.1:8848   # 本地 Nacos
+    address: ${DUBBO_REGISTRY:nacos://127.0.0.1:8848}   # 默认本地 Nacos，可通过环境变量切换
 
 database:
-  user: ${DB_USER:userordertest}
-  # ...（其余数据库配置）
+  user: ${DB_USER:root}
+  password: ${DB_PASSWORD:123456}
+  host: ${DB_HOST:localhost:3307}   # 注意默认端口 3307，与 MySQL 常见默认值 3306 不同
+  dbname: ${DB_NAME:userordertest}  # expresstrack 服务对应 expresstracktest
 ```
 
 ---
@@ -280,15 +282,17 @@ mvn clean package -DskipTests
    | 部署环境 | ECS集群 → 选择 `coffeecluster` |
    | 部署包类型 | JAR 包 |
    | 部署包 | 上传 `coffee-userorder/provider/target/provider-1.0-SNAPSHOT.jar` |
-   | **JVM 参数** | `-Xms128m -Xmx256m -DENV=prod` |
+   | **JVM 参数** | `-Xms128m -Xmx256m -DENV=prod -DDB_HOST=rm-xxx.mysql.rds.aliyuncs.com:3306 -DDB_USER=userordertest -DDB_PASSWORD=你的RDS密码` |
 
-   > `-DENV=prod` 激活 `application-prod.yml`，使服务以生产模式运行。
+   > - `-DENV=prod`：激活 `application-prod.yml`，以生产模式运行
+   > - `-DDB_HOST / -DDB_USER / -DDB_PASSWORD`：注入 RDS 连接信息，覆盖 `application-prod.yml` 中的占位符默认值。**不传这三个参数，服务会尝试连接占位符地址 `rm-xxxxxxxxx`，启动即报错**
 
 3. 点击"部署"，等待应用状态变为**运行中**
 
 ### 8.2 部署快递服务
 
-同上，应用名称改为 `expresstrack`，JAR 包上传 `coffee-expresstrack/provider/target/provider-1.0-SNAPSHOT.jar`。
+同上，应用名称改为 `expresstrack`，JAR 包上传 `coffee-expresstrack/provider/target/provider-1.0-SNAPSHOT.jar`。  
+JVM 参数中 `-DDB_HOST`、`-DDB_USER`、`-DDB_PASSWORD` 与订单服务保持一致，**无需修改数据库名**（`DB_NAME` 默认为 `expresstracktest`，已在 `application-prod.yml` 中单独配置）。
 
 ---
 
