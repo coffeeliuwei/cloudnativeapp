@@ -346,9 +346,11 @@ const baseURL = process.env.VUE_APP_BASE_URL || 'http://x.x.x.x:8005'
 **③ 启动前端**
 
 ```cmd
-cd app-admin
+cd D:\2026教学资料\云原生应用框架与开发\code\cloudnativeapp\app-admin
 npm run dev
 ```
+
+> 路径根据你实际克隆的位置调整。
 
 访问 `http://localhost:8080`，登录后验证订单和轨迹数据能正常加载——数据来自云上数据库，说明前后端联调成功。
 
@@ -363,10 +365,12 @@ npm run dev
 **① 构建生产包**
 
 ```cmd
-cd app-admin
+cd D:\2026教学资料\云原生应用框架与开发\code\cloudnativeapp\app-admin
 set VUE_APP_BASE_URL=http://x.x.x.x:8005
 npm run build
 ```
+
+> 路径根据你实际克隆的位置调整。
 
 > Windows CMD 用 `set`，PowerShell 用 `$env:VUE_APP_BASE_URL="http://x.x.x.x:8005"`
 

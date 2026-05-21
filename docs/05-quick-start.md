@@ -307,6 +307,9 @@ mvn clean install -DskipTests
 **方式一：命令行启动**
 
 ```cmd
+rem 回到项目根目录（Step 4 结束后在 coffee-expresstrack\api 里）
+cd 你的项目路径\cloudnativeapp
+
 cd coffee-userorder\provider
 mvn spring-boot:run
 ```
@@ -402,12 +405,14 @@ const baseURL = process.env.VUE_APP_BASE_URL || 'http://localhost:8005'
 
 ### 安装依赖（只需做一次）
 
-打开新的命令行窗口（**不要关闭前面启动后端的那些窗口**），执行：
+打开新的命令行窗口（**不要关闭前面启动后端的那些窗口**），进入项目根目录下的 `app-admin`：
 
 ```cmd
-cd app-admin
+cd D:\2026教学资料\云原生应用框架与开发\code\cloudnativeapp\app-admin
 npm install
 ```
+
+> 路径根据你实际克隆的位置调整。
 
 `npm install` 会根据 `package.json` 把所有前端依赖包下载到 `node_modules/` 目录。第一次需要几分钟，后续无需重复执行。
 
