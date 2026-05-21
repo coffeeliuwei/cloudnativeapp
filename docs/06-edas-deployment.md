@@ -330,15 +330,27 @@ mvn clean package -DskipTests
 
 ## Step 8：部署前端到 ECS（Nginx 静态托管）
 
-后端三个服务跑在 EDAS 上之后，前端也要部署到云上，让任何人用浏览器打开 ECS 公网 IP 就能访问，而不是只有在本地启动才能用。
+### 什么是"打包成静态文件"？
 
-部署方式：在本地把 Vue 项目打成静态文件（`dist/`），上传到 ECS，用 Nginx 对外提供访问。
+`app-admin` 的源代码是用 Vue 写的 `.vue`、`.js` 文件，浏览器**无法直接运行**这些文件——浏览器只认识 HTML、CSS、普通 JavaScript。
+
+`npm run build` 就是把这些源文件**编译打包**成浏览器能直接打开的 HTML/CSS/JS，输出到 `app-admin/dist/` 目录。这个过程叫"构建"，产出的文件叫"静态文件"。
+
+```
+源代码（Vue 组件、ES6+ 语法）
+    ↓  npm run build（构建/打包）
+dist/
+  ├── index.html          ← 入口 HTML
+  └── static/
+       ├── js/app.xxx.js  ← 所有 JS 打包压缩成一个文件
+       └── css/app.xxx.css
+```
+
+`dist/` 里的文件上传到 ECS 后，Nginx 直接把它们发给用户的浏览器，**ECS 上不需要安装 Node.js**，也不需要运行任何 Vue 相关程序。
 
 ---
 
 ### 8.1 放通安全组端口
-
-需要放通两个端口：
 
 **ECS 控制台 → 安全组 → 配置规则 → 入方向 → 手动添加**
 
@@ -349,13 +361,22 @@ mvn clean package -DskipTests
 
 ---
 
-### 8.2 在本地打包前端
+### 8.2 构建前端静态文件
 
-在本地命令行执行（`x.x.x.x` 替换为你的 **ECS 公网 IP**）：
+> **前置**：你的电脑上需要已安装 Node.js，且执行过 `npm install`（第 05 章 Step 9 已完成）。
+
+打开命令行，进入前端目录：
 
 ```cmd
 cd D:\2026教学资料\云原生应用框架与开发\code\cloudnativeapp\app-admin
 ```
+
+（路径根据你实际克隆的位置调整）
+
+**为什么要设置 `VUE_APP_BASE_URL`？**  
+构建时这个变量会被**永久写入**输出的 JS 文件，告诉用户浏览器应该把 API 请求发到哪个地址。如果不设置，默认值是 `localhost:8005`——用户的浏览器会去请求自己电脑上的 8005 端口，当然找不到。
+
+把 `x.x.x.x` 替换为你的 **ECS 公网 IP**，然后执行：
 
 Windows CMD：
 ```cmd
@@ -369,21 +390,42 @@ $env:VUE_APP_BASE_URL="http://x.x.x.x:8005"
 npm run build
 ```
 
-`VUE_APP_BASE_URL` 会在打包时被写入静态文件，告诉前端去哪里找后端接口。打包完成后，`app-admin/dist/` 就是要部署到 ECS 的全部内容。
+构建需要 1-3 分钟。
 
-**确认**：`dist/` 目录下有 `index.html` 和 `static/` 文件夹。
+**成功标志**：
+```
+  Build complete. The dist directory is ready to be deployed.
+```
+
+**确认**：`app-admin/dist/` 目录下出现了 `index.html` 和 `static/` 文件夹。
 
 ---
 
 ### 8.3 把 dist/ 上传到 ECS
 
-用 **WinSCP**（Windows 图形化 SFTP 工具）连接 ECS：
+用 **WinSCP** 把构建产物上传到 ECS。WinSCP 是 Windows 上的图形化文件传输工具，专门用来在 Windows 和 Linux 服务器之间传文件。
 
-- 主机名：ECS 公网 IP
-- 用户名：`root`（或你创建的用户）
-- 密码/密钥：ECS 登录凭证
+**下载**：[https://winscp.net](https://winscp.net) → 点 Download → 安装
 
-连接后，把本地 `app-admin/dist/` 目录的**全部内容**上传到 ECS 的 `/var/www/coffee-admin/` 目录（没有就新建）。
+**连接 ECS**：
+
+打开 WinSCP → 新建站点：
+
+| 配置项 | 填写值 |
+|--------|--------|
+| 文件协议 | SFTP |
+| 主机名 | ECS 公网 IP |
+| 端口 | 22 |
+| 用户名 | root |
+| 密码 | ECS 登录密码 |
+
+点"登录"，连接成功后左边是你的电脑，右边是 ECS。
+
+在 ECS（右侧）创建目录 `/var/www/coffee-admin/`（右键 → 新建目录）。
+
+在你的电脑（左侧）导航到 `app-admin/dist/`，**全选 dist/ 下的所有文件和文件夹**，拖到右侧 `/var/www/coffee-admin/` 里。
+
+**确认**：ECS 的 `/var/www/coffee-admin/` 下能看到 `index.html`。
 
 ---
 
