@@ -388,29 +388,65 @@ http://localhost:8005/hello/44556677
 
 ## Step 9：启动前端（app-admin）
 
+### 前端是什么，怎么和后端连接
+
+`app-admin` 是基于 Vue 3 的管理后台，负责页面展示和用户交互。它通过 HTTP 请求调用 `coffee-app`（运行在 `8005` 端口）来读写数据。
+
+前端的后端地址配置在 `app-admin/src/api/index.js`：
+
+```js
+const baseURL = process.env.VUE_APP_BASE_URL || 'http://localhost:8005'
+```
+
+本地开发时没有设置 `VUE_APP_BASE_URL`，所以默认调用本地的 `coffee-app`。
+
+### 安装依赖（只需做一次）
+
+打开新的命令行窗口（**不要关闭前面启动后端的那些窗口**），执行：
+
 ```cmd
 cd app-admin
 npm install
+```
+
+`npm install` 会根据 `package.json` 把所有前端依赖包下载到 `node_modules/` 目录。第一次需要几分钟，后续无需重复执行。
+
+> 如果下载很慢，先切换镜像源：
+> ```cmd
+> npm config set registry https://registry.npmmirror.com
+> ```
+> 再重新执行 `npm install`。
+
+**确认**：看到 `added XXX packages` 且没有 `ERROR` 即成功。
+
+### 启动开发服务器
+
+```cmd
 npm run dev
 ```
 
 **成功标志**：
 
 ```
-App running at:
+  App running at:
   - Local:   http://localhost:8080/
+  - Network: http://192.168.x.x:8080/
 ```
 
-浏览器会自动打开管理后台界面。
+浏览器会自动打开 `http://localhost:8080`。
 
-**登录**：输入任意非空用户名和密码即可进入（前端本地校验，不需要后端认证接口）。
+### 登录和功能验证
 
-**验证全栈跑通**：
+**登录**：在登录页输入任意非空用户名和密码，点击登录即可进入（本地开发模式，前端不做账号验证）。
 
-1. 进入"**订单管理**"页 → 能看到订单列表
-2. 进入"**轨迹查询**"页 → 输入 `44556677` 点击搜索，能看到快递轨迹
+**验证整个调用链是否跑通**：
 
-看到轨迹数据，本地完整环境启动成功。
+1. 点击左侧菜单 **"订单管理"** → 页面加载出订单列表（有数据说明前端→coffee-app→userorder→MySQL 链路正常）
+2. 点击左侧菜单 **"轨迹查询"** → 输入单号 `44556677` → 点击搜索 → 出现轨迹记录
+
+能看到轨迹数据，说明 **前端 → coffee-app → Dubbo RPC → expresstrack → MySQL** 全部调用链路跑通，本地环境完全正常。
+
+> **只看到页面骨架但没有数据？** 说明前端能连上，但后端有问题。打开浏览器开发者工具（F12）→ Network 标签 → 看请求的响应状态码和错误信息来定位。
 
 ---
 

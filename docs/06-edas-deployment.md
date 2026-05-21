@@ -313,6 +313,106 @@ mvn clean package -DskipTests
 
 ---
 
+## Step 8：前端连接云上后端
+
+后端三个服务部署到 EDAS 后，前端 `app-admin` 需要改为调用云上的 `coffee-app`，而不是本地的 `localhost:8005`。
+
+`coffee-app` 已配置 `@CrossOrigin`（允许跨域），所以前端可以**在本地运行、调用云上接口**，不需要把前端也部署到 ECS。
+
+### 方式一：本地运行前端，指向云上后端（推荐，适合课程演示）
+
+**① 确认 ECS 安全组放通了 8005 端口（入方向）**
+
+`coffee-app` 对外提供 REST API 的端口是 8005，外网访问必须在安全组放通：
+
+**ECS 控制台 → 安全组 → 配置规则 → 入方向 → 手动添加**
+
+| 端口 | 协议 | 来源 IP | 说明 |
+|------|------|---------|------|
+| 8005 | TCP | 0.0.0.0/0 | coffee-app REST API |
+
+**② 修改前端后端地址**
+
+打开 `app-admin/src/api/index.js`，把 `localhost:8005` 改为 ECS 的**公网 IP**：
+
+```js
+// 修改前
+const baseURL = process.env.VUE_APP_BASE_URL || 'http://localhost:8005'
+
+// 修改后（把 x.x.x.x 替换为你的 ECS 公网 IP）
+const baseURL = process.env.VUE_APP_BASE_URL || 'http://x.x.x.x:8005'
+```
+
+**③ 启动前端**
+
+```cmd
+cd app-admin
+npm run dev
+```
+
+访问 `http://localhost:8080`，登录后验证订单和轨迹数据能正常加载——数据来自云上数据库，说明前后端联调成功。
+
+> 演示完课程后，把地址改回 `localhost:8005` 即可恢复本地开发模式。
+
+---
+
+### 方式二：把前端部署到 ECS（Nginx 静态托管）
+
+如果需要让前端也在云上运行（其他人不需要在本地起前端就能访问），可以构建静态文件部署到 ECS。
+
+**① 构建生产包**
+
+```cmd
+cd app-admin
+set VUE_APP_BASE_URL=http://x.x.x.x:8005
+npm run build
+```
+
+> Windows CMD 用 `set`，PowerShell 用 `$env:VUE_APP_BASE_URL="http://x.x.x.x:8005"`
+
+构建完成后，`app-admin/dist/` 目录下是打包好的静态文件。
+
+**② 上传到 ECS 并配置 Nginx**
+
+用 SFTP 工具（如 WinSCP）把 `dist/` 目录上传到 ECS，比如放到 `/var/www/coffee-admin/`。
+
+在 ECS 上安装 Nginx（如果没有）：
+
+```bash
+# CentOS/Alibaba Cloud Linux
+yum install -y nginx
+
+# Ubuntu
+apt install -y nginx
+```
+
+创建 Nginx 配置文件 `/etc/nginx/conf.d/coffee-admin.conf`：
+
+```nginx
+server {
+    listen 80;
+    root /var/www/coffee-admin;
+    index index.html;
+
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+}
+```
+
+启动 Nginx：
+
+```bash
+systemctl start nginx
+systemctl enable nginx
+```
+
+**③ 放通 80 端口**
+
+ECS 安全组入方向放通 `80 TCP`，然后访问 `http://ECS公网IP` 即可看到前端页面。
+
+---
+
 ## 工作原理：本地 vs EDAS 的区别
 
 ```
