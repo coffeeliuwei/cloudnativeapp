@@ -563,18 +563,41 @@ FLUSH PRIVILEGES;
 
 ---
 
-### 错误 3：数据库连接失败 `Communications link failure`
+### 错误 3：`ERROR 2003 (HY000): Can't connect to MySQL server on 'localhost' (10061)`
 
-**含义**：连不上 MySQL。
+**含义**：MySQL 服务根本没有启动。错误码 `10061` 是 Windows 的"连接被拒绝"，意思是对应端口没有任何进程在监听，不是密码错误，不是端口错误，就是服务没跑。
+
+**解决方法（二选一）**：
+
+方式一：命令行启动（推荐）
+
+```cmd
+net start mysql80
+```
+
+看到 `MySQL80 服务已经启动成功` 后再重新连接。  
+如果报"找不到服务"，试 `net start mysql`（不同安装版本服务名可能不同）。
+
+方式二：图形界面
+
+按 `Win+R` → 输入 `services.msc` 回车 → 找到 `MySQL80` → 右键 → 启动。
+
+> **如何让 MySQL 开机自动启动**：在 `services.msc` 中找到 `MySQL80` → 右键 → 属性 → 启动类型改为"自动"，以后开机就不需要手动启动了。
+
+---
+
+### 错误 4：数据库连接失败 `Communications link failure`
+
+**含义**：MySQL 服务在运行，但连不上。通常是端口配错了。
 
 **排查**：
-1. Windows → `services.msc` 确认 MySQL 服务正在运行
+1. 先用错误 3 的方法确认 MySQL 服务正在运行
 2. 检查 `application-dev.yml` 中 `host` 端口是否和 MySQL 实际端口一致（**默认配置是 3307，而 MySQL 通常安装在 3306**）
 3. 用命令行 `mysql -u root -p -P 3306` 手动连接确认账号密码正确
 
 ---
 
-### 错误 4：`Connection refused`（端口连不上某个服务）
+### 错误 5：`Connection refused`（端口连不上某个服务）
 
 **排查**：
 1. Nacos 是否在运行：访问 [http://localhost:8848/nacos](http://localhost:8848/nacos)
@@ -583,7 +606,7 @@ FLUSH PRIVILEGES;
 
 ---
 
-### 错误 5：`No provider available for the service`
+### 错误 6：`No provider available for the service`
 
 **含义**：Dubbo 在 Nacos 找不到服务提供者，通常是启动顺序问题。
 
@@ -594,7 +617,7 @@ FLUSH PRIVILEGES;
 
 ---
 
-### 错误 6：`Could not find artifact` 或 Maven 找不到内部依赖
+### 错误 7：`Could not find artifact` 或 Maven 找不到内部依赖
 
 **含义**：Step 4 的 `mvn clean install` 没有按顺序执行完。
 
@@ -602,7 +625,7 @@ FLUSH PRIVILEGES;
 
 ---
 
-### 错误 7：`Unknown column` 或 `Table doesn't exist`
+### 错误 8：`Unknown column` 或 `Table doesn't exist`
 
 **含义**：数据库表结构不对，或数据库没初始化。
 
@@ -610,7 +633,7 @@ FLUSH PRIVILEGES;
 
 ---
 
-### 错误 8：`找不到或无法加载主类 MavenWrapperMain`
+### 错误 9：`找不到或无法加载主类 MavenWrapperMain`
 
 **含义**：用了 `mvnw` 而不是 `mvn`，Wrapper 尝试联网下载组件失败。
 
@@ -618,7 +641,7 @@ FLUSH PRIVILEGES;
 
 ---
 
-### 错误 9：端口被占用 `Address already in use`
+### 错误 10：端口被占用 `Address already in use`
 
 **Windows 查找并释放端口（以 7001 为例）：**
 
@@ -630,7 +653,7 @@ taskkill /PID 12345 /F
 
 ---
 
-### 错误 10：前端 `npm install` 很慢或失败
+### 错误 11：前端 `npm install` 很慢或失败
 
 ```cmd
 npm config set registry https://registry.npmmirror.com
@@ -639,7 +662,7 @@ npm install
 
 ---
 
-### 错误 11：前端页面显示正常但查询无数据
+### 错误 12：前端页面显示正常但查询无数据
 
 **排查**：
 1. 先直接访问后端接口 `http://localhost:8005/hello/44556677`，确认后端本身正常
