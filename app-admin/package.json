@@ -41,12 +41,12 @@
     "@vue/test-utils": "^2.4.0",
     "chai": "^4.3.10",
     "eslint": "^8.57.1",
-    "eslint-plugin-vue": "^10.9.1",
+    "eslint-plugin-vue": "^9.33.0",
     "less": "^4.2.0",
     "less-loader": "^12.2.0",
     "lint-staged": "^15.0.0",
     "mockjs": "^1.1.0",
-    "vue-eslint-parser": "^10.4.0"
+    "vue-eslint-parser": "^9.4.3"
   },
   "browserslist": [
     "> 1%",
