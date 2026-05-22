@@ -514,72 +514,74 @@ Could not find artifact com.coffee.yun:coffee-userorder-api:jar:1.0-SNAPSHOT
 
 ---
 
-### 6.2 更新 pom.xml（三个源模块）
+### 6.3 你不需要改 pom.xml（已参数化）
 
-`pom.xml` 里的 `<distributionManagement>` 告诉 Maven"把 JAR 上传到哪里"。项目里目前写的是教师自己的制品库地址，**如果你要维护自己的项目，需要替换成你自己的仓库地址**。
-
-需要修改的文件（共 3 个，其他模块不用改）：
-- `coffee-common/pom.xml`
-- `coffee-userorder/api/pom.xml`
-- `coffee-expresstrack/api/pom.xml`
-
-将每个文件里的 `<distributionManagement>` 替换为你自己的：
+`pom.xml` 里的 `<distributionManagement>` 告诉 Maven"把 JAR 上传到哪里"。**本项目已经把它参数化，你不用再改任何 pom 代码**——所有 `pom.xml` 里都写成这样：
 
 ```xml
 <distributionManagement>
     <snapshotRepository>
-        <!--
-            id：自己起一个名字，全项目统一，后续 settings.xml 要用同一个 id
-            url：从制品库控制台"使用指南"复制你的 snapshot 仓库地址
-        -->
-        <id>你起的仓库ID</id>
-        <url>https://packages.aliyun.com/你的仓库路径/</url>
+        <id>aliyun-snapshot</id>            <!-- 固定标识，与下面 settings.xml 的 <server> id 一致 -->
+        <name>云效 Snapshot 仓库</name>
+        <url>${aliyun.repo.url}</url>        <!-- 仓库地址用占位符，由你自己的 settings.xml 注入 -->
     </snapshotRepository>
 </distributionManagement>
 ```
+
+- 仓库 **id 已固定为 `aliyun-snapshot`**，你 settings.xml 里的 `<server>` 用同一个 id 即可。
+- 仓库**地址不写死在代码里**，而是用 `${aliyun.repo.url}` 占位，由你本机 settings.xml 的属性注入（见下一节）。
+
+> **这样设计的好处**：代码库可以公开共享，每个人用自己的制品库地址和账号，互不影响。教师、学生、不同电脑只改各自的 `settings.xml`，**永远不动 pom 代码**，也不会把谁的私有仓库地址提交进 Git。
 
 > **为什么只有 snapshot，没有 release？**
 > 本项目所有内部模块版本号都带 `-SNAPSHOT`（如 `1.0-SNAPSHOT`），表示开发中的版本，只会上传到 snapshot 仓库。release 仓库用于发布正式版本（如 `1.0.0`），本项目不涉及，不需要配置。
 
 ---
 
-### 6.3 配置认证信息（settings.xml）
+### 6.4 配置认证信息和仓库地址（settings.xml）
 
-Maven 访问私服时需要身份验证。**认证信息只写在你自己电脑上的 `settings.xml` 里，不写进项目代码**（密码不能提交到 Git）。
+Maven 访问私服时需要身份验证，还要知道仓库地址。**这些只写在你自己电脑上的 `settings.xml` 里，不写进项目代码**（地址和密码都不提交到 Git）。
 
 **找到 settings.xml 的位置：**
 - Windows：`C:\Users\你的用户名\.m2\settings.xml`
 - Mac/Linux：`~/.m2/settings.xml`
 - 如果文件不存在，新建一个空文件
 
-`settings.xml` 需要配置两部分，缺一不可：
+`settings.xml` 需要配置三部分：
 
 | 部分 | 作用 | 如果缺失 |
 |------|------|---------|
-| `<servers>` | 告诉 Maven 访问制品库时用什么账号密码 | `mvn deploy` 报 401 Unauthorized |
+| `<servers>` | 上传/下载制品时用什么账号密码 | `mvn deploy` 报 401 Unauthorized |
+| `<profiles>` 里的属性 `aliyun.repo.url` | 注入 pom 里 `${aliyun.repo.url}` 占位的仓库地址 | deploy 报 url 为空 / 无法解析 |
 | `<profiles>` 里的 `<repositories>` | 告诉 Maven 去哪个地址下载依赖 | 构建时报 Could not find artifact |
 
-**完整的 `settings.xml`（本项目只需要一个 snapshot 仓库）：**
+**完整的 `settings.xml`（把仓库地址换成 6.1 创建的、账号密码从控制台"使用指南"复制）：**
 
 ```xml
 <settings>
-  <!-- 第一部分：认证信息（上传和下载都要用） -->
+  <!-- 第一部分：认证信息（上传和下载都要用），id 固定为 aliyun-snapshot -->
   <servers>
     <server>
-      <id>你起的仓库ID</id>          <!-- 必须与 pom.xml 里 distributionManagement 的 id 完全一致 -->
+      <id>aliyun-snapshot</id>          <!-- 必须与 pom.xml 里 distributionManagement 的 id 一致（项目已固定为此值） -->
       <username>从控制台使用指南复制</username>
       <password>从控制台使用指南复制</password>
     </server>
   </servers>
 
-  <!-- 第二部分：仓库下载地址（告诉 Maven 去哪里找依赖） -->
   <profiles>
     <profile>
       <id>aliyun-artifacts</id>
+
+      <!-- 第二部分：仓库地址，注入 pom 里 ${aliyun.repo.url} 占位符（上传用） -->
+      <properties>
+        <aliyun.repo.url>https://packages.aliyun.com/你的命名空间/maven/你的仓库</aliyun.repo.url>
+      </properties>
+
+      <!-- 第三部分：下载地址（告诉 Maven 去哪里找内部依赖），复用上面的属性 -->
       <repositories>
         <repository>
-          <id>你起的仓库ID</id>      <!-- 必须与上面 server 的 id 完全一致 -->
-          <url>https://packages.aliyun.com/你的仓库路径/</url>   <!-- 与 pom.xml 里的 url 相同 -->
+          <id>aliyun-snapshot</id>      <!-- 与上面 server 的 id 完全一致 -->
+          <url>${aliyun.repo.url}</url>
           <snapshots><enabled>true</enabled></snapshots>
           <releases><enabled>false</enabled></releases>
         </repository>
@@ -593,16 +595,18 @@ Maven 访问私服时需要身份验证。**认证信息只写在你自己电脑
 </settings>
 ```
 
-> **关键：三处 `id` 必须完全一致**
+> **关键：id 全部用 `aliyun-snapshot`，地址只填一次**
 >
-> Maven 靠 `id` 把"去哪里找"（repositories）和"用什么账号"（servers）关联起来：
+> 项目已把 pom 里的 id 固定为 `aliyun-snapshot`、地址改为 `${aliyun.repo.url}` 占位，所以你 settings.xml 里：
+> - `<server>`、`<repository>` 的 id 都用 `aliyun-snapshot`（与 pom 对应）；
+> - 仓库真实地址只在 `<properties>` 里写一次（`aliyun.repo.url`），上传（pom 的 distributionManagement）和下载（repository）都引用它。
 >
 > ```
-> pom.xml  <distributionManagement> → <snapshotRepository> → <id>你起的仓库ID</id>
->                                                                        ↕ 必须相同
-> settings.xml  <servers> → <server> → <id>你起的仓库ID</id>
->                                                ↕ 必须相同
-> settings.xml  <profiles> → <repositories> → <repository> → <id>你起的仓库ID</id>
+> pom.xml  <distributionManagement> → <id>aliyun-snapshot</id> + <url>${aliyun.repo.url}</url>
+>                                                       ↕ id 相同，url 由属性注入
+> settings.xml  <servers> → <server id=aliyun-snapshot>（账号密码）
+> settings.xml  <profiles> → <properties> aliyun.repo.url=你的仓库地址
+> settings.xml  <profiles> → <repositories> → <repository id=aliyun-snapshot url=${aliyun.repo.url}>
 > ```
 >
 > 任何一处 `id` 对不上，要么上传时 401 认证失败，要么下载时找不到仓库。
@@ -619,7 +623,7 @@ Maven 访问私服时需要身份验证。**认证信息只写在你自己电脑
 
 ---
 
-### 6.4 上传 JAR 到私服
+### 6.5 上传 JAR 到私服
 
 配置完成后，按顺序执行 `mvn deploy`（注意顺序：被依赖的先上传）：
 
@@ -644,7 +648,7 @@ mvn clean deploy -DskipTests
 
 ---
 
-### 6.5 验证是否生效
+### 6.6 验证是否生效
 
 **测试方法：** 删掉本机 `.m2` 缓存中对应的包，重新构建 `coffee-app`，看它能否自动从私服下载。
 

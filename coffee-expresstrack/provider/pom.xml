@@ -137,9 +137,10 @@
 
     <distributionManagement>
         <snapshotRepository>
-            <id>2643746-snapshot-a6HsOJ</id>
+            <!-- 云效私有仓库：id 需与 settings.xml 中 <server> 的 id 一致；url 由 settings.xml 的 profile 属性 aliyun.repo.url 注入。配置方法见 docs/01 “阿里云制品库” 一节 -->
+            <id>aliyun-snapshot</id>
             <name>云效 Snapshot 仓库</name>
-            <url>https://packages.aliyun.com/699e67ca9df7fdfa65468b27/maven/2643746-snapshot-a6hsoj</url>
+            <url>${aliyun.repo.url}</url>
         </snapshotRepository>
     </distributionManagement>
 

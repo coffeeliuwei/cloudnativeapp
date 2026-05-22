@@ -586,4 +586,47 @@ npm install
 
 ---
 
+### 错误8：`npm install` 报 `Exit handler never called!`
+
+**现象**：执行 `npm install` 时，前面刷过一大片 `npm warn deprecated ...`（无害的过时提示，可忽略），但最后报：
+
+```
+npm error Exit handler never called!
+npm error This is an error with npm itself. Please report this error at:
+npm error <https://github.com/npm/cli/issues>
+```
+
+**含义**：这是 **npm 自身的内部 bug**，不是项目代码问题。常见于本地 npm 缓存损坏，或较新的 Node + npm 组合（如 Node 24 + npm 11）在某些机器上的不稳定。
+
+**解决方法（按顺序，多数情况第一步即可解决）**：
+
+方案一：清缓存后彻底重装（最常见有效）
+
+```cmd
+cd app-admin
+npm cache clean --force
+rmdir /s /q node_modules
+del package-lock.json
+npm install
+```
+
+方案二：方案一无效时，换国内镜像源再重装
+
+```cmd
+npm config set registry https://registry.npmmirror.com
+npm cache clean --force
+npm install
+```
+
+方案三：仍报同样的 npm 内部错误时，把 npm 降到稳定的 10.x
+
+```cmd
+npm install -g npm@10
+npm install
+```
+
+> `del package-lock.json` 会删除锁文件让 npm 重新解析依赖。这是排查 npm 内部错误的常规手段，本项目重装后会生成新的锁文件，不影响功能。
+
+---
+
 [← 返回主文档](../README.md)
