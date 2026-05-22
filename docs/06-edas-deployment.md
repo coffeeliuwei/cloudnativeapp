@@ -266,6 +266,131 @@ mvn clean package -DskipTests
 
 ---
 
+## 发布制品到云效私有仓库（云原生制品管理）
+
+> **本节解决一个关键问题：项目里 8 个 `pom.xml` 都配了云效私有仓库，你必须换成自己的，否则无法上云。**
+
+### 为什么云原生需要私有制品仓库
+
+第 05 章本地开发时，`mvn install` 把 `coffee-common`、各 `api` 包装进了你电脑的本地 Maven 仓库（`~/.m2`），其他模块从本地仓库就能找到它们。
+
+但**云上的流水线（CI）每次都是一台全新的干净机器，没有你的本地仓库**。要让流水线能构建 `coffee-userorder` 这种依赖了 `coffee-common` 的模块，就必须先把 `coffee-common` 这些内部包**发布（deploy）到一个云上仓库**，流水线再从云上把它们拉下来。这个云上仓库就是**云效制品仓库**。
+
+这正是 `pom.xml` 里 `<distributionManagement>` 的作用——它声明"我执行 `mvn deploy` 时，把包推到哪个远程仓库"。
+
+> **初学者必读：为什么第 05 章没配仓库也能跑？这一节会不会和第 05 章冲突？**
+>
+> **不冲突，第 05 章完全不受影响。** 关键在于 Maven 的三个命令做的事不一样：
+>
+> | 命令 | 做什么 | 读 `distributionManagement` 吗 |
+> |------|--------|:--:|
+> | `mvn package` | 编译 + 打成 jar，放在本模块的 `target/` | 否 |
+> | `mvn install` | 在 package 基础上，把 jar 复制进**你电脑的本地仓库** `~/.m2` | 否 |
+> | `mvn deploy` | 在 install 基础上，把 jar **上传到远程私有仓库** | **是** |
+>
+> 第 05 章本地开发用的是 `install` 和 `package`，它们**根本不读 `<distributionManagement>`**，所以哪怕你从没配过云效仓库、`${aliyun.repo.url}` 是空的，第 05 章也照样全部跑通。
+>
+> 只有进到本节执行 `mvn deploy`，Maven 才会去读那段配置、才需要仓库地址和账号——这就是下面 9.1～9.2 要教你配的东西。一句话：**`deploy` 是 `install` 的"再多走一步——上传到云上"。**
+
+```xml
+<distributionManagement>
+    <snapshotRepository>
+        <id>aliyun-snapshot</id>                 <!-- 凭据标识，与 settings.xml 的 <server> 对应 -->
+        <name>云效 Snapshot 仓库</name>
+        <url>${aliyun.repo.url}</url>             <!-- 仓库地址，由 settings.xml 注入，不写死在代码里 -->
+    </snapshotRepository>
+</distributionManagement>
+```
+
+> **注意**：仓库地址和账号密码都**不写在 `pom.xml` 里**，而是放在你本机的 `settings.xml`。这样代码库可以公开共享，每个人用自己的仓库和凭据，互不影响——这也是为什么本项目的 pom 用 `${aliyun.repo.url}` 占位而不是写死地址。
+
+### 9.1 创建你自己的云效制品仓库
+
+1. 登录 [云效](https://flow.aliyun.com)，进入 **制品仓库 Packages**（顶部菜单或 [packages.aliyun.com](https://packages.aliyun.com)）
+2. 左侧 **Maven** → **创建仓库**
+   - 仓库类型：选 **Snapshot**（本项目版本号都是 `1.0-SNAPSHOT`）
+   - 记下生成的**仓库地址**，形如：
+     ```
+     https://packages.aliyun.com/<你的命名空间>/maven/<你的仓库名>
+     ```
+3. 点击页面的 **指南 / 凭证** 按钮，获取访问凭据：**用户名** 和 **密码**（云效为 Maven 仓库单独生成的一组账号密码，不是你的阿里云登录密码）
+
+### 9.2 在 Maven settings.xml 中配置仓库地址和凭据
+
+打开你的 Maven `settings.xml`（通常在 `Maven安装目录/conf/settings.xml`，或 `~/.m2/settings.xml`），填入两部分：
+
+**① 凭据**（`<servers>` 标签内，`id` 必须是 `aliyun-snapshot`，与 pom 里的 `<id>` 一致）：
+
+```xml
+<servers>
+  <server>
+    <id>aliyun-snapshot</id>
+    <username>云效生成的用户名</username>
+    <password>云效生成的密码</password>
+  </server>
+</servers>
+```
+
+**② 仓库地址**（`<profiles>` 标签内，定义 pom 用到的 `aliyun.repo.url` 属性，并激活该 profile）：
+
+```xml
+<profiles>
+  <profile>
+    <id>aliyun-repo</id>
+    <properties>
+      <aliyun.repo.url>https://packages.aliyun.com/你的命名空间/maven/你的仓库名</aliyun.repo.url>
+    </properties>
+  </profile>
+</profiles>
+
+<activeProfiles>
+  <activeProfile>aliyun-repo</activeProfile>
+</activeProfiles>
+```
+
+> 这样 `pom.xml` 里的 `${aliyun.repo.url}` 就会被替换成你自己的仓库地址。换电脑或换学生，只改各自的 `settings.xml` 即可，**不用动任何 pom 代码**。
+
+### 9.3 发布制品（mvn deploy）
+
+把 `mvn install` / `mvn package` 换成 `mvn deploy` 即可在打包的同时把制品推到云效仓库。**按依赖顺序执行**：
+
+```cmd
+cd coffee-common
+mvn clean deploy -DskipTests
+
+cd ..\coffee-userorder
+mvn clean deploy -DskipTests
+
+cd ..\coffee-expresstrack
+mvn clean deploy -DskipTests
+
+cd ..\coffee-app
+mvn clean deploy -DskipTests
+```
+
+**成功标志**：日志末尾出现 `Uploading to aliyun-snapshot: https://packages.aliyun.com/...` 和 `BUILD SUCCESS`。
+
+**确认**：回到云效制品仓库页面，能在仓库里看到 `com.coffee.yun` 下的 `coffee-common`、`coffee-userorder-api` 等制品。
+
+> **报 401/403（认证失败）**：`settings.xml` 里 `<server>` 的用户名密码不对，或 `id` 不是 `aliyun-snapshot`（必须和 pom 里的 `<id>` 完全一致）。
+> **报 `aliyun.repo.url` 无法解析 / URL 为空**：`<profile>` 没激活，检查 `<activeProfiles>` 是否加了 `aliyun-repo`。
+
+### 9.4 让云效流水线从仓库拉取并部署到 EDAS
+
+制品上云后，就可以用云效流水线实现"提交代码 → 自动构建 → 自动部署到 EDAS"的全自动云原生流程：
+
+1. 云效 **流水线 Flow** → 新建流水线 → 选 **Java 构建、部署到 EDAS** 模板
+2. **代码源**：绑定你的代码仓库（如本项目的 Git 地址）
+3. **构建步骤**：执行 `mvn clean deploy -DskipTests`（流水线运行环境会读取项目 `settings.xml`，或在流水线里配置同样的仓库凭据）。干净的构建机正是靠 9.3 发布到云效仓库的 `coffee-common` 等内部包，才能成功编译依赖它们的模块
+4. **部署步骤**：选 **部署到 EDAS** → 选择目标应用（对应 Step 6 创建的 `userorder`/`expresstrack`/`coffee-app`）→ 部署包选构建产物 jar → 填写与 Step 6 相同的 JVM 参数（`-DENV=prod -DDB_HOST=...` 等）
+5. 保存并运行流水线
+
+跑通后，每次向代码仓库提交，流水线会自动构建并部署到 EDAS，无需再手动打包上传——这就是完整的云原生交付链路。
+
+> **不想用流水线？** 也可以手动走 Step 6：本地 `mvn package` 打出 jar，在 EDAS 控制台手动上传。两种方式产物一致，流水线只是把这套动作自动化了。
+
+---
+
 ## Step 6：在 EDAS 部署三个服务
 
 **EDAS 控制台** → **应用管理 → 创建应用**
