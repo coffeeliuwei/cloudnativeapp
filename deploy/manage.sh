@@ -2,11 +2,17 @@
 # =============================================================
 # Coffee 微服务一键管理脚本
 # 用法：
-#   ./manage.sh start    启动所有服务
-#   ./manage.sh stop     停止所有服务
-#   ./manage.sh restart  重启所有服务
+#   ./manage.sh start    启动本机部署的服务
+#   ./manage.sh stop     停止本机部署的服务
+#   ./manage.sh restart  重启本机部署的服务
 #   ./manage.sh status   查看运行状态
 #   ./manage.sh logs     实时查看日志（Ctrl+C 退出）
+#
+# 多 ECS 部署模式：
+#   本脚本支持 "一台 ECS 跑一个微服务" 的标准微服务架构。
+#   每台 ECS 的 jars/ 目录只放本机要跑的那一个 jar，脚本会
+#   自动检测 jars/ 下存在的 jar，只管理对应的服务，跳过其他。
+#   3 台 ECS 用完全相同的这一份脚本，无需修改。
 # =============================================================
 
 # ┌─────────────────────────────────────────────────────────┐
@@ -65,9 +71,10 @@ _start_one() {
     pid_file=$(_pid_file "$name")
 
     # 检查 JAR 是否存在
+    # 多 ECS 部署时本机通常只有一个 jar，未部署到本机的服务直接跳过（不算错误）
     if [ ! -f "$jar" ]; then
-        echo "  [✗] $name: JAR 不存在 → $jar"
-        return 1
+        echo "  [-] $name: 跳过（本机未部署此服务）"
+        return 0
     fi
 
     # 已在运行
@@ -130,12 +137,16 @@ _stop_one() {
 _status_one() {
     local name=$1
     local port="${SVC_PORT[$name]}"
-    if _is_running "$name"; then
+    local jar="$JARS_DIR/${SVC_JAR[$name]}"
+    # 区分"未部署到本机"和"已部署但未运行"两种状态
+    if [ ! -f "$jar" ]; then
+        echo "  [-] $name: 未部署到本机"
+    elif _is_running "$name"; then
         local pid
         pid=$(_get_pid "$name")
         echo "  [✓] $name: 运行中 (PID=$pid, 端口=$port)"
     else
-        echo "  [✗] $name: 未运行"
+        echo "  [✗] $name: 未运行（jar 存在但进程未启动）"
     fi
 }
 
@@ -144,8 +155,18 @@ _status_one() {
 # =============================================================
 
 do_start() {
-    echo ">>> 启动所有服务（Nacos: $NACOS_ADDR）"
+    echo ">>> 启动本机部署的服务（Nacos: $NACOS_ADDR）"
     mkdir -p "$LOGS_DIR"
+    # 检查本机部署了哪些 jar，给学生一个明确的提示
+    local found=0
+    for name in "${START_ORDER[@]}"; do
+        [ -f "$JARS_DIR/${SVC_JAR[$name]}" ] && found=$((found+1))
+    done
+    if [ $found -eq 0 ]; then
+        echo "  [!] $JARS_DIR 下没有任何已知 jar，请确认是否上传成功"
+        return 1
+    fi
+    echo "    本机检测到 $found 个 jar，开始按依赖顺序启动..."
     for name in "${START_ORDER[@]}"; do
         _start_one "$name"
     done
