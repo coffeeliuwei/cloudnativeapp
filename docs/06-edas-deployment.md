@@ -702,202 +702,223 @@ SSH 登录到 3 台 ECS（重复 3 次）          → 拿到 3 台空白 Linux
 - ❌ 想扩容要再起 ECS、再 scp、再启服务（这正是 EDAS / Serverless 要解决的问题）
 - ❌ 没有可视化的服务治理页面（只能去 MSE Nacos 控制台或日志里看）
 
-### 5.2 每台 ECS 安装 JDK 17（重复 3 次）
+### 5.2 先认识 Workbench——你的浏览器内置 ECS 终端
 
-**3 台 ECS 都要装一次**。SSH 登录每台（Windows 同学用 PowerShell 自带的 `ssh root@<ECS公网IP>`，或者 WinSCP / PuTTY），分别执行：
+零基础同学最大的恐惧:在自己电脑上装 SSH 客户端、配密钥、打 scp 命令——**这些全都可以不用**。阿里云 ECS 自带一个叫 **Workbench** 的网页终端,你只要会"用鼠标点"和"在网页上传文件"就够了。
 
-```bash
-# Ubuntu / Debian
-sudo apt update
-sudo apt install -y openjdk-17-jdk
+**怎么打开 Workbench**:
 
-# Alibaba Cloud Linux 3 / CentOS
-sudo dnf install -y java-17-openjdk-devel
+1. 登录阿里云控制台 → 进入 **云服务器 ECS** → 实例列表
+2. 找到你要操作的 ECS,**点最右边的"远程连接"** → 选 **"Workbench 远程连接"** → 点 **"立即登录"**
+3. 在弹出窗里填登录信息(root + 你设的密码),点连接
+4. 浏览器里就出现了一个黑底白字的终端窗口——这就是 ECS 内部的命令行,和"SSH 上去"完全等效
 
-# 确认
-java -version
-```
+**Workbench 顶部工具栏的两个关键按钮**:
 
-每台都要看到输出包含 **17.0.x**。
+| 按钮 | 用途 | 用法 |
+|------|------|------|
+| **📤 上传文件** | 把本地文件传到 ECS | 点按钮 → 选本地文件 → 填目标路径 → 上传 |
+| **📥 下载文件** | 从 ECS 下载文件到本地 | 一般不用,出问题时下载日志看 |
 
-> ❓ **为什么要 JDK 17？** 本项目用 Spring Boot 3.x，要求 JDK 17+。**JDK 8 / 11 启动会报 `UnsupportedClassVersionError`**。
+> 💡 **3 台 ECS 怎么操作?** 给每台 ECS 都各开一个浏览器标签页,3 个 Workbench 标签页并排,操作哪台就切到哪个标签页。比 SSH 客户端切换还方便。
 >
-> 💡 **嫌重复 3 次麻烦？** 这正是后面 PaaS / Serverless 路径要解决的问题——EDAS 部署应用时帮你装 JDK，Serverless 平台直接给你运行时。先体验"手动 3 次"的繁琐，才能理解托管平台的价值。
->
-> 💡 **进阶技巧**：可以用一行 ssh 循环：
-> ```bash
-> for ip in <ECS-1_IP> <ECS-2_IP> <ECS-3_IP>; do
->   ssh root@$ip "apt update && apt install -y openjdk-17-jdk"
-> done
-> ```
+> 💡 **下面所有操作只用 3 件事**:
+> 1. 在 Workbench 终端窗口 **粘贴并回车** 几条事先准备好的命令
+> 2. 点 **📤 上传文件** 按钮把本地准备好的文件传上去
+> 3. 偶尔用 Workbench 终端窗口 **输入命令检查状态**
 
-### 5.3 每台 ECS 的目录结构（不同！）
+### 5.3 在本地电脑改好两个配置文件(用 VSCode 或记事本)
 
-**注意**：3 台 ECS 用 **同一份 manage.sh**，但 `jars/` 和 `config/` 里的内容 **不同**——每台只放自己要跑的那一个 jar。
+为了避免在 ECS 上用 nano/vim 编辑文件(那对零基础学生太难了),**改文件这一步全部在你自己电脑上完成**,改完直接上传。
 
-```
-ECS-1（订单服务）                ECS-2（快递服务）                  ECS-3（网关+前端）
-────────────                  ────────────                    ────────────
-/opt/coffee/                   /opt/coffee/                     /opt/coffee/
-├── jars/                      ├── jars/                        ├── jars/
-│   └── coffee-userorder-      │   └── coffee-expresstrack-     │   └── coffee-app-
-│       provider-1.0-          │       provider-1.0-            │       0.0.1-
-│       SNAPSHOT.jar           │       SNAPSHOT.jar             │       SNAPSHOT.jar
-├── config/                    ├── config/                      ├── (无 config 目录，
-│   └── userorder/             │   └── expresstrack/            │    coffee-app 不连库)
-│       └── application-       │       └── application-         │
-│           dev.yml            │           dev.yml              │
-├── logs/                      ├── logs/                        ├── logs/
-└── manage.sh                  └── manage.sh                    └── manage.sh
-```
+**改 manage.sh** —— 3 台 ECS 用同一份,所以只改 1 次:
 
-> 💡 **关键设计**：3 台 ECS 用 **完全相同的 manage.sh**。脚本会自动检测 `jars/` 下有什么 jar，只启动对应的服务，跳过另外两个。这样你不用为每台机器维护不同版本的脚本。
-
-在每台 ECS 上先建好基础目录：
-
-```bash
-# 在 3 台 ECS 上分别执行
-sudo mkdir -p /opt/coffee/jars
-sudo chown -R $USER:$USER /opt/coffee
-```
-
-### 5.4 在 3 台 ECS 上各上传所需文件
-
-**在你的本地电脑** 项目根目录执行。把 `<ECS-1_IP>`、`<ECS-2_IP>`、`<ECS-3_IP>` 替换为对应公网 IP。
-
-**给 ECS-1 上传订单服务的全部材料**：
-```bash
-scp deploy/manage.sh root@<ECS-1_IP>:/opt/coffee/
-scp -r deploy/config/userorder root@<ECS-1_IP>:/opt/coffee/config/
-scp coffee-userorder/provider/target/coffee-userorder-provider-1.0-SNAPSHOT.jar \
-    root@<ECS-1_IP>:/opt/coffee/jars/
-```
-
-**给 ECS-2 上传快递服务的全部材料**：
-```bash
-scp deploy/manage.sh root@<ECS-2_IP>:/opt/coffee/
-scp -r deploy/config/expresstrack root@<ECS-2_IP>:/opt/coffee/config/
-scp coffee-expresstrack/provider/target/coffee-expresstrack-provider-1.0-SNAPSHOT.jar \
-    root@<ECS-2_IP>:/opt/coffee/jars/
-```
-
-**给 ECS-3 上传网关材料（不需要 config）**：
-```bash
-scp deploy/manage.sh root@<ECS-3_IP>:/opt/coffee/
-scp coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar \
-    root@<ECS-3_IP>:/opt/coffee/jars/
-```
-
-> 💡 **Windows 同学没装 scp？** PowerShell 7 自带；或用 **WinSCP**（图形界面拖拽，新建 3 个站点对应 3 台 ECS）。
-
-**确认**：分别 SSH 登录 3 台 ECS，`ls /opt/coffee/jars/` 应只看到 1 个 jar（不是 3 个）。
-
-### 5.5 每台 ECS 配置 Nacos 地址（3 次）
-
-**3 台 ECS 都要做一次**。SSH 登录每台后编辑 `manage.sh`：
-
-```bash
-nano /opt/coffee/manage.sh
-```
-
-找到顶部"学生必填配置区"的这一行：
+用 VSCode(或记事本)打开本地 `cloudnativeapp/deploy/manage.sh`,找到第 20 行附近:
 
 ```bash
 NACOS_ADDR="mse-xxxxxxxx-p.nacos-ans.mse.aliyuncs.com:8848"
 ```
 
-**改成你在 Part 3.3 记下的 MSE Nacos 内网地址**（3 台填同一个值，因为它们要注册到同一个注册中心）。保存退出（`Ctrl+O` → 回车 → `Ctrl+X`）。
+把这里换成你在 Part 3.3 记下的 **MSE Nacos 内网地址**,保存。
 
-> ❓ **为什么 3 台 ECS 要填同一个 Nacos 地址？**
-> 因为微服务架构靠 **共享注册中心** 互相发现：ECS-3 上的 coffee-app 要调 ECS-1 上的 userorder，必须先去 Nacos 查"userorder 在哪台 IP 上"。3 台不连同一个 Nacos，就互相找不到。
+**改两个 application-dev.yml**:
 
-> ❓ **为什么用内网地址不用公网地址？** ECS 和 MSE Nacos 在同一 VPC，走内网更快更稳。公网地址只在你本地电脑临时调试时用。
+用 VSCode 打开 `cloudnativeapp/deploy/config/userorder/application-dev.yml`,把 `yourDbUser` / `yourDbPassword` / `your-rds-address` 换成你的 RDS 内网地址和账号,保存。
 
-### 5.6 填写数据库配置（仅 ECS-1 和 ECS-2）
+同样打开 `cloudnativeapp/deploy/config/expresstrack/application-dev.yml`,改另一份(注意数据库名是 `expresstracktest`)。
 
-ECS-3 上的 coffee-app 不连数据库，**跳过 ECS-3**。
+**确认**:本地的 `deploy/` 目录里 3 个文件都已经改好。**ECS-3 不需要 application-dev.yml**(coffee-app 不连数据库)。
 
-**ECS-1 上**：
-```bash
-nano /opt/coffee/config/userorder/application-dev.yml
-```
-把 `yourDbUser`、`yourDbPassword`、`your-rds-address` 换成你在 Part 3.2 记下的实际值：
+> 💡 **为什么不在 ECS 上改?** ECS 上得用 nano 或 vim 这种命令行编辑器,光是"怎么保存退出"就能卡半小时。在本地用你熟悉的编辑器改完再上传,简单 10 倍。
 
-```yaml
-database:
-  user:     ${DB_USER:userordertest}
-  password: ${DB_PASSWORD:你的实际密码}
-  host:     ${DB_HOST:rm-xxxxx.mysql.rds.aliyuncs.com:3306}
-  dbname:   ${DB_NAME:userordertest}
-```
+### 5.4 在每台 ECS 上装 JDK 17(粘贴一条命令)
 
-**ECS-2 上**：
-```bash
-nano /opt/coffee/config/expresstrack/application-dev.yml
-```
-同样填实际值（注意数据库名是 `expresstracktest`）。
-
-> ❓ **为什么把数据库配置放成一个独立文件？** 这是 manage.sh 的设计：把"环境敏感信息"和 jar 分离，**改密码不用重新打包**。脚本启动时用 `--spring.config.additional-location=file:/opt/coffee/config/xxx/` 加载这个文件，覆盖 jar 内的默认值。
->
-> ❓ **为什么 ECS-3 没有 config？** `coffee-app` 是纯粹的 API 网关 + Dubbo 消费者，不连数据库，所以不需要数据库配置文件。
-
-### 5.7 在每台 ECS 启动服务
-
-3 台 ECS 上分别执行 **完全相同** 的命令：
+打开 ECS-1 的 Workbench,在终端窗口里粘贴这条命令然后回车:
 
 ```bash
-chmod +x /opt/coffee/manage.sh
-/opt/coffee/manage.sh start
+apt update && apt install -y openjdk-17-jdk && java -version
 ```
 
-**ECS-1 上你会看到**：
+> 💡 Ubuntu 用 `apt`;Alibaba Cloud Linux 用 `dnf install -y java-17-openjdk-devel`。本章默认 Ubuntu。
+
+最后一行能看到 `openjdk version "17.0.x"` 即成功。
+
+**对 ECS-2 和 ECS-3 同样操作**——切到对应 Workbench 标签页,粘贴同一条命令,等装好。
+
+> 💡 **就这一条命令,3 台重复 3 次**。后面 Part 6 的 EDAS 会帮你免掉这步,先体验"手动 3 次"的繁琐才能理解 PaaS 的价值。
+
+### 5.5 在每台 ECS 上预建目录(粘贴一条命令)
+
+每台 ECS 的 Workbench 里粘贴同一条命令,回车:
+
+```bash
+mkdir -p ~/coffee/jars ~/coffee/config && cd ~/coffee && pwd
+```
+
+输出应显示 `/root/coffee`(如果是 Ubuntu 默认用户则是 `/home/ubuntu/coffee`)——这就是后面所有文件要放的"工作目录"。
+
+> 💡 **为什么用 `~/coffee` 不用 `~/coffee`?** `~` 是你当前用户的家目录,本来就你自己拥有,**不需要 sudo**。这避免了"权限不够"这类零基础学生最容易踩的坑。
+
+### 5.6 用 Workbench 上传按钮把文件传到每台 ECS
+
+> **每台 ECS 的目标结构(回顾)**——上传时把文件放到对应位置:
+> ```
+> ~/coffee/
+> ├── manage.sh          ← 3 台都要传
+> ├── jars/
+> │   └── <本机服务的 jar>  ← 每台只传 1 个
+> └── config/
+>     └── <本机服务名>/
+>         └── application-dev.yml  ← 仅 ECS-1 / ECS-2 传
+> ```
+
+#### 操作流程(以 ECS-1 为例)
+
+切到 ECS-1 的 Workbench 标签页,**点顶部 📤 上传文件** 按钮,弹出对话框:
+
+**第 1 次上传:manage.sh**
+- 本地文件 → 选 `cloudnativeapp/deploy/manage.sh`
+- ECS 目标路径 → 填 `/root/coffee/` (或你 Part 5.5 看到的工作目录)
+- 点上传
+
+**第 2 次上传:本机要跑的 jar**
+- 本地文件 → 选 `cloudnativeapp/coffee-userorder/provider/target/coffee-userorder-provider-1.0-SNAPSHOT.jar`
+- ECS 目标路径 → 填 `/root/coffee/jars/`
+- 点上传
+
+**第 3 次上传:本机的 application-dev.yml**
+- 本地文件 → 选 `cloudnativeapp/deploy/config/userorder/application-dev.yml` (Part 5.3 已改好)
+- ECS 目标路径 → 填 `/root/coffee/config/userorder/` (路径会自动创建子目录;若提示路径不存在,先在终端跑一句 `mkdir -p ~/coffee/config/userorder`)
+- 点上传
+
+#### ECS-2(快递服务) 同样三次上传,但选不同的 jar 和 yml
+
+| 第几次上传 | 本地文件 | ECS 目标路径 |
+|----------|---------|-----------|
+| 1 | `deploy/manage.sh` | `/root/coffee/` |
+| 2 | `coffee-expresstrack/provider/target/coffee-expresstrack-provider-1.0-SNAPSHOT.jar` | `/root/coffee/jars/` |
+| 3 | `deploy/config/expresstrack/application-dev.yml` | `/root/coffee/config/expresstrack/` |
+
+#### ECS-3(网关) 只需两次上传(不要 application-dev.yml)
+
+| 第几次上传 | 本地文件 | ECS 目标路径 |
+|----------|---------|-----------|
+| 1 | `deploy/manage.sh` | `/root/coffee/` |
+| 2 | `coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar` | `/root/coffee/jars/` |
+
+#### 检查上传成功
+
+每台 ECS 的 Workbench 终端里粘贴:
+
+```bash
+ls -R ~/coffee
+```
+
+应该看到 manage.sh、jars/ 下有 1 个 jar、config/(ECS-3 没有这个目录)。
+
+> 💡 **没看到 jars/ 或 config/ 子目录?** 可能是 Workbench 上传时目标路径填错。手动建一下:`mkdir -p ~/coffee/jars ~/coffee/config/userorder` 然后重新上传指定到这个路径。
+
+### 5.7 在每台 ECS 启动服务(粘贴一条命令)
+
+每台 ECS 的 Workbench 里粘贴**完全相同**的命令:
+
+```bash
+cd ~/coffee && chmod +x manage.sh && ./manage.sh start
+```
+
+**ECS-1 输出**(只启动 userorder,其他两个跳过):
 ```
 >>> 启动本机部署的服务（Nacos: mse-xxx:8848）
     本机检测到 1 个 jar，开始按依赖顺序启动...
-  [→] userorder: 正在启动（端口=7001）...
   [✓] userorder: 启动成功 (PID=12345, 端口=7001)
   [-] expresstrack: 跳过（本机未部署此服务）
   [-] app: 跳过（本机未部署此服务）
 ```
 
-**ECS-2 上**：只启动 expresstrack，另两个显示"跳过"。
-**ECS-3 上**：只启动 coffee-app，另两个显示"跳过"。
+**ECS-2 输出**:只启动 expresstrack,另两个显示"跳过"
+**ECS-3 输出**:只启动 coffee-app,另两个显示"跳过"
 
-> 💡 **"跳过" 是正常现象**——manage.sh 检测到本机 `jars/` 里没有那个 jar，自动跳过。这就是"一份脚本 3 台通用"的实现方式。
+> 💡 **"跳过"是正常的**——manage.sh 检测到本机 `jars/` 里没有那个 jar,自动跳过。这就是"一份脚本 3 台通用"的设计。
 >
-> 💡 **启动顺序建议**：先启动 ECS-1、ECS-2（provider 提供者），再启动 ECS-3（consumer 消费者）。反过来 coffee-app 启动时一时找不到 provider，会有几秒 Dubbo 重试警告，不影响最终成功。
+> 💡 **启动顺序建议**:先启 ECS-1、ECS-2(provider),最后启 ECS-3(consumer)。顺序反了 coffee-app 启动时会有几秒"找不到服务提供者"警告,不影响最终成功。
 
-### 5.8 日常管理命令（每台 ECS 独立管理）
+### 5.8 在 ECS 安全组(网页 GUI)开放端口
 
-每台 ECS 各自管理自己的服务：
+不用进 ECS 终端,在阿里云**网页**上点鼠标:
 
-| 命令 | 在 ECS-1 上 | 在 ECS-2 上 | 在 ECS-3 上 |
-|------|-----------|------------|------------|
-| `./manage.sh status` | 看 userorder 状态 | 看 expresstrack 状态 | 看 coffee-app 状态 |
-| `./manage.sh logs` | 看 userorder 日志 | 看 expresstrack 日志 | 看 coffee-app 日志 |
-| `./manage.sh stop` | 停 userorder | 停 expresstrack | 停 coffee-app |
-| `./manage.sh restart` | 重启 userorder | 重启 expresstrack | 重启 coffee-app |
+1. ECS 控制台 → 选 ECS-1 → 点 **"安全组"** 列下的链接 → 进入安全组详情
+2. **配置规则** → **入方向** → **手动添加**
+3. 各 ECS 要放开的端口(用鼠标添加,选 TCP,目标 `0.0.0.0/0`):
 
-**确认 3 台都跑通**：
-- 浏览器访问 `http://<ECS-1_IP>:7001/actuator/health` → `{"status":"UP"}`
-- 浏览器访问 `http://<ECS-2_IP>:8001/actuator/health` → `{"status":"UP"}`
-- 浏览器访问 `http://<ECS-3_IP>:8005/actuator/health` → `{"status":"UP"}`
-- MSE Nacos 控制台 → 服务列表，应能看到 3 个服务都已注册
+| ECS | 端口 | 说明 |
+|-----|------|------|
+| ECS-1 | 7001 | 订单服务健康检查(可选,只为浏览器能 curl 验证) |
+| ECS-2 | 8001 | 快递服务健康检查 |
+| ECS-3 | 8005 | API 网关(浏览器要从这里调接口,**必须开**) |
+| ECS-3 | 80 | Nginx 前端(下一节用) |
 
-> ⚠️ **第一次启动前要做的两件事**：
-> 1. **3 台 ECS 的安全组入方向** 各自放开对应端口（ECS-1:7001、ECS-2:8001、ECS-3:8005）
-> 2. 确认 **RDS 白名单** 已加 3 台 ECS 的私网 IP（Part 3.2 步骤 ④）
+22 端口默认已开(不开 Workbench 也用不了)。
 
-### 5.9 路径 A 工作原理图解
+### 5.9 验证 3 个服务都跑起来了
+
+在浏览器地址栏分别访问(浏览器,不是 Workbench 终端):
+
+| 验证地址 | 期望结果 |
+|---------|---------|
+| `http://<ECS-1 公网IP>:7001/actuator/health` | `{"status":"UP"}` |
+| `http://<ECS-2 公网IP>:8001/actuator/health` | `{"status":"UP"}` |
+| `http://<ECS-3 公网IP>:8005/actuator/health` | `{"status":"UP"}` |
+| MSE Nacos 控制台 → 服务管理 → 服务列表 | 看到 3 个服务都已注册 |
+
+**如果某一个不通**,回对应 ECS 的 Workbench 终端粘贴:
+
+```bash
+cd ~/coffee && ./manage.sh status   # 看进程在不在
+cd ~/coffee && ./manage.sh logs     # 看启动日志(Ctrl+C 退出)
+```
+
+### 5.10 日常管理(每台 ECS 独立管理)
+
+以后想停 / 重启 / 看日志,**回对应 ECS 的 Workbench 终端**,粘贴命令:
+
+| 想做的事 | 在 ECS-1 / ECS-2 / ECS-3 终端粘贴 |
+|---------|----------------------------------|
+| 看本机服务在不在跑 | `cd ~/coffee && ./manage.sh status` |
+| 实时看本机日志 | `cd ~/coffee && ./manage.sh logs` (Ctrl+C 退出) |
+| 停本机服务 | `cd ~/coffee && ./manage.sh stop` |
+| 重启本机服务 | `cd ~/coffee && ./manage.sh restart` |
+| 换新版本 jar | 用 📤 上传新 jar 覆盖旧的 → `./manage.sh restart` |
+
+### 5.11 路径 A 工作原理图解
 
 ```
-你在 3 台 ECS 上分别执行 ./manage.sh start
+你在 3 台 ECS 的 Workbench 里分别粘贴 ./manage.sh start
         │
         ▼
-每台 ECS 上 manage.sh 检测 jars/ 下的 jar，对存在的服务执行：
+每台 ECS 上 manage.sh 检测 ~/coffee/jars/ 下的 jar，对存在的服务执行：
    java -jar xxx.jar \
        --dubbo.registry.address=nacos://<MSE 内网地址>:8848 \
-       --spring.config.additional-location=file:/opt/coffee/config/xxx/
+       --spring.config.additional-location=file:~/coffee/config/xxx/
         │
         ▼
 Spring Boot 启动（dev profile）
@@ -1013,7 +1034,7 @@ EDAS Agent 需要主动连阿里云上报数据。**3 台 ECS 都必须** 放通
 
 > 💡 **注意**：这里只是把 3 台 ECS "登记" 到 EDAS 集群里——还没有任何应用跑在上面。下一步创建应用时再决定每个应用部署到哪台 ECS。
 
-> ⚠️ **如果路径 A 还在跑**：导入 EDAS 之前最好先到每台 ECS 上执行 `/opt/coffee/manage.sh stop` 停掉路径 A 的进程，避免端口冲突和 Dubbo 注册冲突。
+> ⚠️ **如果路径 A 还在跑**：导入 EDAS 之前最好先到每台 ECS 上执行 `~/coffee/manage.sh stop` 停掉路径 A 的进程，避免端口冲突和 Dubbo 注册冲突。
 
 ### 6.5 部署 3 个应用，每个绑定到指定 ECS
 
@@ -1225,70 +1246,76 @@ npm run build
 > ⚠️ **不设这个变量直接 build 会怎样？**
 > 默认 `localhost:8005`——用户的浏览器会去请求 **自己电脑** 的 8005 端口，当然找不到。这是最常见的"前端打开了但接口都失败"的坑。
 
-### 8.3 上传 dist/ 到 ECS-3
+### 8.3 把 dist 打包成 zip(为了方便上传一个文件)
 
-用 **WinSCP**（Windows 图形化 SFTP 工具，winscp.net 下载安装）连接 **ECS-3**：
+`dist/` 目录里有几十个文件,一个一个上传太麻烦。**在本地把整个 dist 文件夹压缩成一个 zip**:
 
-1. WinSCP → 新建站点 → SFTP / **ECS-3 公网 IP** / 22 / root / ECS 密码
-2. 右侧（ECS-3）建目录 `/var/www/coffee-admin/`
-3. 把左侧（本地）`app-admin/dist/` 下的 **所有文件和文件夹** 全选拖到右侧
+- **Windows**:进入 `cloudnativeapp/app-admin/` → 右键 `dist` 文件夹 → "发送到" → "压缩文件夹"(或 7-Zip 压缩为 zip) → 得到 `dist.zip`
+- **Mac**:在 Finder 里右键 `dist` 文件夹 → "压缩 dist" → 得到 `dist.zip`
 
-**Linux/Mac 同学** 用 scp：
-```bash
-scp -r app-admin/dist/* root@<ECS-3_IP>:/var/www/coffee-admin/
-```
+> 💡 **为什么不直接拖整个文件夹?** Workbench 网页上传按钮目前对单个文件最稳,文件夹批量上传有时会卡。zip 一下传一个文件最可靠。
 
-**确认**：ECS-3 上 `ls /var/www/coffee-admin/` 能看到 `index.html` 和 `static/`。
+### 8.4 用 Workbench 上传按钮把文件传到 ECS-3
 
-### 8.4 在 ECS-3 安装并配置 Nginx
+切到 **ECS-3** 的 Workbench 标签页(同 Part 5.2)。
 
-SSH 登录 **ECS-3**：
+#### 上传 1:dist.zip(前端静态文件)
 
-```bash
-# Ubuntu
-sudo apt install -y nginx
+- 点 **📤 上传文件** → 本地选 `app-admin/dist.zip` → 目标路径填 `/root/` → 上传
 
-# Alibaba Cloud Linux
-sudo dnf install -y nginx
-```
+#### 上传 2:coffee-admin.conf(Nginx 配置文件)
 
-创建站点配置：
+项目里已经准备好了一份配置文件 `cloudnativeapp/deploy/coffee-admin.conf`,**完全不用改**,直接上传:
+
+- 点 **📤 上传文件** → 本地选 `cloudnativeapp/deploy/coffee-admin.conf` → 目标路径填 `/root/` → 上传
+
+### 8.5 在 ECS-3 Workbench 终端粘贴一连串命令(一次完成所有事)
+
+在 ECS-3 的 Workbench 终端里粘贴下面 **一整段** 命令,回车,等执行完:
 
 ```bash
-sudo tee /etc/nginx/conf.d/coffee-admin.conf > /dev/null << 'EOF'
-server {
-    listen 80;
-    root /var/www/coffee-admin;
-    index index.html;
+# 1. 装 Nginx
+apt update && apt install -y nginx unzip
 
-    # Vue Router history 模式：刷新页面不报 404
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-EOF
+# 2. 解压前端文件到 Nginx 服务目录
+mkdir -p /var/www/coffee-admin
+unzip -o /root/dist.zip -d /var/www/coffee-admin
+# Windows 压缩出来的 zip 解压后顶层可能多套一层 dist/，这里规范化目录
+[ -d /var/www/coffee-admin/dist ] && mv /var/www/coffee-admin/dist/* /var/www/coffee-admin/ && rmdir /var/www/coffee-admin/dist
+
+# 3. 把 Nginx 配置文件放到正确位置
+cp /root/coffee-admin.conf /etc/nginx/conf.d/coffee-admin.conf
+
+# 4. 启动 Nginx 并设为开机自启
+nginx -t                       # 检查语法
+systemctl start nginx
+systemctl enable nginx
+
+echo "✅ 前端部署完成，浏览器访问 http://你的ECS-3公网IP 即可"
 ```
 
-启动：
+> 💡 **这一整段命令做了什么?**
+> 1. 装 nginx 和 unzip 两个工具
+> 2. 把上传的 dist.zip 解压到 Nginx 默认要读的目录 `/var/www/coffee-admin/`
+> 3. 把上传的 Nginx 配置文件放到 Nginx 的"扫描目录"`/etc/nginx/conf.d/`
+> 4. 启动 Nginx,并让它开机自启动
+>
+> 这一段命令是固定模板,不用懂细节,粘贴一次就好。
 
-```bash
-sudo nginx -t                 # 检查语法
-sudo systemctl start nginx
-sudo systemctl enable nginx   # 开机自启
-```
+### 8.6 ECS-3 安全组放通入方向端口
 
-### 8.5 ECS-3 安全组放通入方向端口
+> 如果 Part 5.8 已经放开了 ECS-3 的 80 和 8005,跳过本节。
 
-**ECS-3** 安全组 → 入方向 → 手动添加：
+**阿里云控制台 → ECS → ECS-3 → 安全组 → 配置规则 → 入方向 → 手动添加**(纯网页操作,鼠标点):
 
 | 端口 | 协议 | 授权对象 | 说明 |
 |------|------|---------|------|
 | 80 | TCP | 0.0.0.0/0 | Nginx 对外提供前端 |
-| 8005 | TCP | 0.0.0.0/0 | coffee-app REST API（浏览器从前端调用） |
+| 8005 | TCP | 0.0.0.0/0 | coffee-app REST API(浏览器从前端调用) |
 
-> 💡 **ECS-1 和 ECS-2 不需要放通入方向端口**（除非要从外部 curl 健康检查）——它们的服务只供 VPC 内部通过 Dubbo RPC 调用，不需要暴露到公网。这正是微服务分层的好处：**只有入口节点（ECS-3）暴露公网**，其他节点藏在内网，更安全。
+> 💡 **ECS-1 和 ECS-2 不需要放通这些**(除非要从外部 curl 健康检查)——它们的服务只供 VPC 内部通过 Dubbo RPC 调用,不需要暴露到公网。这正是微服务分层的好处:**只有入口节点(ECS-3)暴露公网**,其他节点藏在内网,更安全。
 
-**确认**：浏览器访问 `http://<ECS-3公网IP>`，应看到 CoffeeTrack 登录页。
+**确认**:浏览器访问 `http://<ECS-3公网IP>`,应看到 CoffeeTrack 登录页。
 
 ---
 
@@ -1318,7 +1345,7 @@ sudo systemctl enable nginx   # 开机自启
 # MSE 实例详情 → 服务管理 → 服务列表 → 应看到 coffee-userorder 等服务
 
 # 方式 2：日志
-/opt/coffee/manage.sh logs
+~/coffee/manage.sh logs
 # 找到包含 "Dubbo Application has completed" 的行即成功
 ```
 
@@ -1411,7 +1438,7 @@ sudo systemctl enable nginx   # 开机自启
 |------|------|
 | 代码源 | 绑定你的 Git 仓库 |
 | 构建 | `mvn clean deploy -DskipTests`(库模块发布到云效,应用模块同时打 jar) |
-| 部署 | SSH 到对应 ECS → `scp` 新 jar 到 `/opt/coffee/jars/` → `/opt/coffee/manage.sh restart` |
+| 部署 | SSH 到对应 ECS → `scp` 新 jar 到 `~/coffee/jars/` → `~/coffee/manage.sh restart` |
 
 例如 userorder 的流水线只 deploy 到 ECS-1,expresstrack 只到 ECS-2,coffee-app 只到 ECS-3。
 
@@ -1467,7 +1494,7 @@ sudo systemctl enable nginx   # 开机自启
 ### 路径 A 特有问题
 
 **Q：`manage.sh start` 30 秒后报"未监听到端口"**
-- `tail -100 /opt/coffee/logs/xxx.log` 看真实错误
+- `tail -100 ~/coffee/logs/xxx.log` 看真实错误
 - 最常见：数据库密码不对 / Nacos 地址不对 / 端口被另一个进程占用（`ss -tlnp | grep 7001`）
 
 **Q：服务启动了但 MSE Nacos 看不到注册**
@@ -1475,7 +1502,7 @@ sudo systemctl enable nginx   # 开机自启
 - 看日志里是否有 `Failed to connect to nacos`
 
 **Q：怎么知道服务真在跑**
-- 在对应 ECS 上：`/opt/coffee/manage.sh status`
+- 在对应 ECS 上：`~/coffee/manage.sh status`
 - 在对应 ECS 上：`curl http://localhost:7001/actuator/health`（端口换成本机服务的端口）
 
 **Q：`manage.sh status` 显示某些服务"未部署到本机"是不是错了？**
