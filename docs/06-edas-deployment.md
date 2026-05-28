@@ -53,7 +53,8 @@
 | 一台笔记本跑 3 个进程 | **3 台 ECS，每台跑 1 个服务** | Part 3.1 |
 | 本地装的 MySQL 8.0（端口 3307） | 阿里云 RDS MySQL（内网地址 3306） | Part 3.2 |
 | 本地启动的 nacos-server-2.x（127.0.0.1:8848） | MSE Nacos 托管实例 | Part 3.3 |
-| 本地 `mvn package` 生成的 jar | **同一份 jar，不改一行代码** | Part 4 |
+| 本地 `mvn install` 把库装进 `~/.m2`（只你这台机能用） | **`mvn deploy` 把库发到云效私有仓库**（任何机器都能拉） | Part 4.2 / 4.3 |
+| 本地 `mvn package` 生成的 jar | **同一份 jar，不改一行代码** | Part 4.4 |
 | 本地 `java -jar xxx.jar` 启动 3 个进程 | 路径 A：3 台 ECS 各跑一个 `manage.sh` / 路径 B：EDAS 把 3 个应用部署到 3 台 ECS | Part 5 / Part 6 |
 | 本地 `application-dev.yml`（连本地 MySQL / 本地 Nacos） | 同一文件 + 启动时注入云上地址，**或** 用 `application-prod.yml` | Part 5 / Part 6 |
 | 本地 `npm run dev`（开发服务器 :8080） | `npm run build` 生成静态文件 → ECS-3 + Nginx 托管 | Part 8 |
@@ -458,51 +459,162 @@ curl -v telnet://mse-xxxxxxxx-p.nacos-ans.mse.aliyuncs.com:8848
 
 ---
 
-## Part 4 本地打包
+## Part 4 项目模块结构与制品准备
 
-> 两条路径都要把 jar 准备好。这一节只做一次，产物给后面所有路径用。
+> 这一节做两件事：① 搞清项目的 6 个模块谁是"库"谁是"应用"；② 把它们准备到可以部署的状态。
 >
-> **🧭 对照第 05 章**：这一步的命令你已经在本地跑过一次了（第 05 章 Step 4 打包后 `java -jar` 启动 jar）。这里只是 **再打一次包**——产出的 jar **和本地启动用的是同一个文件**，**没有任何"云上专用版本"**。这正是云原生最关键的一句话："**Build once, run anywhere**"（构建一次，到处运行）。
+> **🧭 对照第 05 章**：你在本地已经做过 `mvn install` 和 `mvn package`，命令一样。**但有一件事第 05 章为了简化没讲：项目里有 3 个模块（coffee-common 和两个 api）是设计成"放进 Maven 私有仓库供其他模块引用"的**——它们不是要被部署运行的 jar，是要被 **依赖** 的库。本节把这层结构补齐。
 
-### 4.1 模块依赖关系（为什么要按顺序打包）
+### 4.1 项目模块分类：3 个库 + 3 个应用
+
+打开 `cloudnativeapp/` 你能看到 6 个模块（每个都是一个独立的 `pom.xml`）。它们分两类，命运完全不同：
 
 ```
-coffee-common  ←─────────┐  被所有模块引用
-                         │
-coffee-userorder/api     ┤
-       │                 │
-       ▼                 │
-coffee-userorder/provider├──► 产物 jar
-                         │
-coffee-expresstrack/api  ┤
-       │                 │
-       ▼                 │
-coffee-expresstrack/provider──► 产物 jar
-                         │
-coffee-app ──────────────┘──► 产物 jar
-（依赖两个 api 模块以发起 Dubbo 调用）
+                    ┌───────── 库模块（Library）─────────┐
+                    │  被其他模块引用，不会被独立运行       │
+                    │  ▼                                  │
+                    │  coffee-common          公共工具类  │
+                    │  coffee-userorder/api   订单接口定义 │
+                    │  coffee-expresstrack/api 快递接口定义│
+                    └─────────────┬───────────────────────┘
+                                  │ 被依赖
+                                  ▼
+                    ┌───────── 应用模块（Deployable）────┐
+                    │  打成 jar 后部署到 ECS 上运行        │
+                    │                                    │
+                    │  coffee-userorder/provider  → ECS-1│
+                    │  coffee-expresstrack/provider→ ECS-2│
+                    │  coffee-app                  → ECS-3│
+                    └────────────────────────────────────┘
 ```
 
-**规则**：被依赖的模块要先 `mvn install`（装进本地 Maven 仓库），上层模块才能找到它。
+| 模块 | 类型 | 干什么 | 谁依赖它 |
+|------|------|--------|---------|
+| `coffee-common` | **库** | 公共工具类、统一返回结构 `Result<T>` 等 | 所有 5 个其他模块 |
+| `coffee-userorder/api` | **库** | 订单服务的 Dubbo 接口定义（`OrderService` 等） | `coffee-userorder/provider`、`coffee-app` |
+| `coffee-expresstrack/api` | **库** | 快递服务的 Dubbo 接口定义 | `coffee-expresstrack/provider`、`coffee-app` |
+| `coffee-userorder/provider` | **应用** | 订单服务实现 + Spring Boot 启动类 | （部署到 ECS-1） |
+| `coffee-expresstrack/provider` | **应用** | 快递服务实现 + Spring Boot 启动类 | （部署到 ECS-2） |
+| `coffee-app` | **应用** | API 网关 + Dubbo 消费者 + Spring Boot 启动类 | （部署到 ECS-3） |
 
-### 4.2 一键打包
+> 💡 **为什么 api 要单独成模块？**
+> Dubbo RPC 的本质是 "本地接口调用 → 网络传输 → 远端实现执行"。consumer（coffee-app）和 provider（coffee-userorder）**必须共享同一份接口定义**才能编译——所以接口定义被抽到独立的 `api` 模块,两边都通过 Maven 依赖把它拉进来。这是 RPC 框架的标准做法。
 
-在项目根目录（`cloudnativeapp/`）打开命令行（CMD / PowerShell / 终端均可），**按顺序执行**：
+### 4.2 库模块放哪：本地仓库 vs 云效私有仓库
+
+3 个库模块编译出来后,要"存"在某个 Maven 仓库里,让应用模块构建时能拉取到它们。**有两种存放方式**:
+
+| 方式 | 命令 | 存到哪 | 谁能用 | 适用场景 |
+|------|------|--------|--------|---------|
+| **A. 本地仓库** | `mvn install` | `~/.m2/repository/` | **只有你这台电脑** | 第一次本地跑通、单人开发 |
+| **B. 云效私有仓库** | `mvn deploy` | 阿里云云效制品仓库 | **任何机器**（你的电脑、同事电脑、云效流水线、EDAS 构建机器都能拉） | 多人协作、CI/CD、生产部署 |
+
+#### 4.2.1 为什么云原生项目要用云效私有仓库
+
+**关键场景**：你想让云效流水线自动构建 `coffee-userorder/provider`。流水线机器是 **全新的临时容器**,没有你的 `~/.m2`,所以构建 provider 时它会去 Maven 中央仓库找 `coffee-userorder-api`——**找不到!** 因为这是你内部的库,中央仓库没有。
+
+**解决方案**:把库模块发布到云效私有仓库,流水线机器从云效拉取。
+
+这正是项目里所有 `pom.xml` 的 `<distributionManagement>` 节点的作用——声明 "执行 `mvn deploy` 时把包推到云效仓库地址":
+
+```xml
+<distributionManagement>
+    <snapshotRepository>
+        <id>aliyun-snapshot</id>
+        <url>${aliyun.repo.url}</url>   <!-- 仓库地址由 settings.xml 注入，不写死 -->
+    </snapshotRepository>
+</distributionManagement>
+```
+
+> 💡 **回到学习主线**: 本地开发时为了简单,你用了 `mvn install` 走方式 A。**正式上云时,推荐切换到方式 B**——这才是真正的云原生制品流。本节后面教你怎么切。
+
+#### 4.2.2 创建你自己的云效制品仓库
+
+1. 登录 [云效](https://flow.aliyun.com) → 进入 **制品仓库 Packages**(或访问 [packages.aliyun.com](https://packages.aliyun.com))
+2. 左侧 **Maven → 创建仓库**
+   - 类型选 **Snapshot**(本项目版本号都是 `1.0-SNAPSHOT`,要进 Snapshot 仓库)
+   - 仓库名自定义,如 `coffee-snapshots`
+3. 创建后记下 **仓库地址**,形如:
+   ```
+   https://packages.aliyun.com/maven/repository/<你的命名空间>/coffee-snapshots
+   ```
+4. 点页面上的 **"指南"** 或 **"凭证"** → 复制 **用户名 + 密码**(云效专门为 Maven 仓库生成的一对,**不是你的阿里云登录密码**)
+
+#### 4.2.3 配置本地 Maven 的 settings.xml
+
+打开你本机的 `settings.xml`(位于 `~/.m2/settings.xml`,没有就新建;Windows 是 `C:\Users\你\.m2\settings.xml`),加入下面两段:
+
+```xml
+<settings>
+  <!-- 凭据：id 必须是 aliyun-snapshot，与 pom 的 <id> 完全一致 -->
+  <servers>
+    <server>
+      <id>aliyun-snapshot</id>
+      <username>云效给你的用户名</username>
+      <password>云效给你的密码</password>
+    </server>
+  </servers>
+
+  <!-- 仓库地址：通过 properties 注入到所有 pom 的 ${aliyun.repo.url} 占位符 -->
+  <profiles>
+    <profile>
+      <id>aliyun-repo</id>
+      <properties>
+        <aliyun.repo.url>https://packages.aliyun.com/maven/repository/你的命名空间/coffee-snapshots</aliyun.repo.url>
+      </properties>
+    </profile>
+  </profiles>
+
+  <activeProfiles>
+    <activeProfile>aliyun-repo</activeProfile>
+  </activeProfiles>
+</settings>
+```
+
+> ❓ **为什么仓库地址不直接写在 pom.xml?**
+> 因为 pom.xml 会被推到公开 Git 仓库,而仓库地址含命名空间(暴露你的账号信息)、不同人 / 不同机器的仓库不同。所以 pom 里用 `${aliyun.repo.url}` 占位,**每个人在自己机器的 settings.xml 里填自己的**。
+
+### 4.3 发布库模块到云效(方式 B,推荐)
+
+在项目根目录,按依赖顺序发布:
 
 ```cmd
-rem ① 安装公共依赖与 API 接口包（被三个 provider/网关引用）
+rem 把 3 个库模块发布到云效私有仓库
 cd coffee-common
-mvn clean install -DskipTests
+mvn clean deploy -DskipTests
 
 cd ..\coffee-userorder\api
-mvn clean install -DskipTests
+mvn clean deploy -DskipTests
 
 cd ..\..\coffee-expresstrack\api
-mvn clean install -DskipTests
+mvn clean deploy -DskipTests
 ```
 
+每个命令末尾应看到 `Uploading to aliyun-snapshot: https://packages.aliyun.com/...` 和 `BUILD SUCCESS`。
+
+**确认**:回云效控制台 → 制品仓库 → 你的仓库,能看到 `com.coffee.yun` 命名空间下出现了 3 个 artifact:
+- `coffee-common`
+- `coffee-userorder-api`
+- `coffee-expresstrack-api`
+
+> 💡 **以后这 3 个库的版本怎么管?**
+> - 你改了 `coffee-common` 的代码 → 再次 `mvn deploy` → 云效仓库会保留多个 SNAPSHOT 时间戳版本,Maven 自动拉最新的
+> - 想发布正式版本(不再带 SNAPSHOT) → 改 `pom.xml` 里的 `<version>` 为 `1.0.0` 不带 SNAPSHOT,但需要在云效另建一个 Release 仓库
+> - 教学环境用 SNAPSHOT 就够了
+
+> ⚠️ **方式 A 的简化版本(可选)**: 如果你第一次跑不想搞云效,可以只在本地 `mvn install` 这 3 个库:
+> ```cmd
+> cd coffee-common && mvn clean install -DskipTests
+> cd ..\coffee-userorder\api && mvn clean install -DskipTests
+> cd ..\..\coffee-expresstrack\api && mvn clean install -DskipTests
+> ```
+> 后续的 provider/网关打包能在你本机找到这 3 个库。**但流水线、新机器都用不了**——这就是 "云原生制品流" 和 "本地能跑就行" 的差别。
+
+### 4.4 打包 3 个应用模块为可部署 jar
+
+完成 4.3 之后,3 个 provider/网关在构建时可以从云效(或本地仓库)拉到所需的 api 和 common,正常打包:
+
 ```cmd
-rem ② 打包三个可部署的 jar
 cd ..\..\coffee-userorder\provider
 mvn clean package -DskipTests
 
@@ -513,17 +625,33 @@ cd ..\..\coffee-app
 mvn clean package -DskipTests
 ```
 
-> 💡 **Linux/Mac 同学** 把 `\` 换成 `/`，命令完全一样。
+> 💡 **Linux/Mac 同学** 把 `\` 换成 `/`,命令完全一样。
 
-**确认产物**：每个 `mvn` 命令末尾出现 `BUILD SUCCESS`，并且：
+**确认产物**:每个 `mvn` 命令末尾出现 `BUILD SUCCESS`,并且能在以下位置找到 jar:
 
-| 服务 | jar 文件位置 |
-|------|------------|
-| 订单服务 | `coffee-userorder/provider/target/coffee-userorder-provider-1.0-SNAPSHOT.jar` |
-| 快递服务 | `coffee-expresstrack/provider/target/coffee-expresstrack-provider-1.0-SNAPSHOT.jar` |
-| API 网关 | `coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar` |
+| 应用模块 | jar 文件位置 | 部署到 |
+|---------|------------|-------|
+| 订单服务 | `coffee-userorder/provider/target/coffee-userorder-provider-1.0-SNAPSHOT.jar` | ECS-1 |
+| 快递服务 | `coffee-expresstrack/provider/target/coffee-expresstrack-provider-1.0-SNAPSHOT.jar` | ECS-2 |
+| API 网关 | `coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar` | ECS-3 |
 
-> ⚠️ **必须用 `mvn` 不要用 `mvnw`**：`mvnw`（Maven Wrapper）会联网下载 Maven，国内常超时。
+> ⚠️ **必须用 `mvn` 不要用 `mvnw`**: `mvnw`(Maven Wrapper)会联网下载 Maven,国内常超时。
+>
+> ⚠️ **如果报错 "Could not find artifact com.coffee.yun:coffee-userorder-api:1.0-SNAPSHOT"**: 说明 4.3 没做或失败,库还没在仓库里,自然找不到。回去检查 4.2.3 的 settings.xml 配置和 4.3 的 deploy 是否成功。
+
+### 4.5 制品流总结
+
+```
+你的代码                                                  云上跑起来
+─────────                                              ─────────
+                  mvn deploy ↗ 云效私有仓库
+3 个库模块 ───────┘                ↓
+                                  ↓ (provider/网关构建时拉取)
+                                  ↓
+3 个应用模块 ─── mvn package → 3 个 jar → 上传到 3 台 ECS → 启动
+```
+
+**关键认识**:云效私有仓库是 **库模块的"中转站"** ——库不需要被部署运行,它只需要"在那里",等应用模块构建时来拉取。这是云原生 "制品与代码分离、库与应用分离" 思想的体现。
 
 ---
 
@@ -1271,96 +1399,33 @@ sudo systemctl enable nginx   # 开机自启
 
 ## Part 10 进阶 — 云效流水线自动化
 
-> 第一次上云完全可以跳过这一节。第 5 / 6 节的"本地打包 + 手动上传"已经能把应用跑起来。本节介绍更"云原生"的做法：把制品发布到云上私有仓库，再用流水线实现"提交代码 → 自动构建 → 自动部署"。
+> 第一次上云可以跳过这一节。前面 Part 4 + Part 5/6 的"本地打包 + 手动上传"已经能把应用跑起来。本节进一步做"提交代码 → 自动构建 → 自动部署"——这才是完整的云原生交付链路。
+>
+> **前置条件**:Part 4.2/4.3 已经把 3 个库模块发布到了云效私有仓库(流水线机器要能拉到它们,不然构建直接失败)。
 
-### 10.1 公共步骤：私有制品仓库
+### 10.1 路径 A 的流水线:ssh + scp 自动重启
 
-#### 为什么需要私有仓库
+云效流水线选 **"主机部署"** 模板,为 3 台 ECS 分别配置(也可以做成一条流水线分发到 3 台):
 
-第 05 章本地开发时，`mvn install` 把 `coffee-common`、各 `api` 装进了 **你电脑的本地仓库**（`~/.m2`），其他模块从本地找到它们。
+| 步骤 | 内容 |
+|------|------|
+| 代码源 | 绑定你的 Git 仓库 |
+| 构建 | `mvn clean deploy -DskipTests`(库模块发布到云效,应用模块同时打 jar) |
+| 部署 | SSH 到对应 ECS → `scp` 新 jar 到 `/opt/coffee/jars/` → `/opt/coffee/manage.sh restart` |
 
-但 **云上流水线每次都是一台全新的干净机器**，没有你的本地仓库。要让它能构建依赖了 `coffee-common` 的模块，就得把 `coffee-common` 等内部包 **发布（`mvn deploy`）到云上仓库**——这个云上仓库就是 **云效制品仓库**。
+例如 userorder 的流水线只 deploy 到 ECS-1,expresstrack 只到 ECS-2,coffee-app 只到 ECS-3。
 
-这正是项目里 `pom.xml` 的 `<distributionManagement>` 的作用——声明"执行 `mvn deploy` 时把包推到哪里"。
+### 10.2 路径 B 的流水线:直接部署到 EDAS
 
-> **第 05 章和 Part 4 用的都是 `install` / `package`，根本不读 `<distributionManagement>`**，所以本地开发哪怕没配云效仓库也跑得通。`mvn deploy` 才会用到它。
-
-#### 创建云效制品仓库
-
-1. 登录 [云效](https://flow.aliyun.com) → 进入 **制品仓库 Packages**
-2. 左侧 **Maven → 创建仓库**
-   - 类型选 **Snapshot**（本项目版本号都是 `1.0-SNAPSHOT`）
-   - 记下 **仓库地址** 形如 `https://packages.aliyun.com/<命名空间>/maven/<仓库名>`
-3. 点页面的 **指南** → 获取 **用户名 + 密码**（云效专用，**不是阿里云登录密码**）
-
-#### 配置 Maven settings.xml
-
-打开 Maven 的 `settings.xml`（位于 `~/.m2/settings.xml` 或 Maven 安装目录的 `conf/settings.xml`）：
-
-```xml
-<servers>
-  <server>
-    <id>aliyun-snapshot</id>             <!-- 必须与 pom 中 distributionManagement 的 id 一致 -->
-    <username>云效给的用户名</username>
-    <password>云效给的密码</password>
-  </server>
-</servers>
-
-<profiles>
-  <profile>
-    <id>aliyun-repo</id>
-    <properties>
-      <aliyun.repo.url>https://packages.aliyun.com/你的命名空间/maven/你的仓库名</aliyun.repo.url>
-    </properties>
-  </profile>
-</profiles>
-
-<activeProfiles>
-  <activeProfile>aliyun-repo</activeProfile>
-</activeProfiles>
-```
-
-#### 发布制品
-
-按依赖顺序：
-
-```cmd
-cd coffee-common
-mvn clean deploy -DskipTests
-
-cd ..\coffee-userorder
-mvn clean deploy -DskipTests
-
-cd ..\coffee-expresstrack
-mvn clean deploy -DskipTests
-
-cd ..\coffee-app
-mvn clean deploy -DskipTests
-```
-
-成功后，回云效制品仓库页面，能看到 `com.coffee.yun` 下的所有制品。
-
-### 10.2 路径 A 的流水线：ssh + scp 自动重启
-
-云效流水线选 **"主机部署"** 模板，配置：
+云效流水线选 **"Java 构建 + 部署到 EDAS"** 模板:
 
 | 步骤 | 内容 |
 |------|------|
 | 代码源 | 绑定你的 Git 仓库 |
 | 构建 | `mvn clean deploy -DskipTests` |
-| 部署 | SSH 到 ECS → 执行 `scp 新 jar 到 /opt/coffee/jars/` → `/opt/coffee/manage.sh restart` |
+| 部署 | 选 **部署到 EDAS** → 目标应用:`userorder`/`expresstrack`/`coffee-app` → JVM 参数与 Part 6 一致 → 目标 ECS 也与 Part 6 一致(一应用一 ECS) |
 
-### 10.3 路径 B 的流水线：直接部署到 EDAS
-
-云效流水线选 **"Java 构建 + 部署到 EDAS"** 模板：
-
-| 步骤 | 内容 |
-|------|------|
-| 代码源 | 绑定你的 Git 仓库 |
-| 构建 | `mvn clean deploy -DskipTests` |
-| 部署 | 选 **部署到 EDAS** → 目标应用：`userorder` / `expresstrack` / `coffee-app` → JVM 参数与第 6 节一致 |
-
-跑通后，每次 `git push` 自动构建并部署——这才是完整的云原生交付链路。
+跑通后,每次 `git push` 自动构建并部署到对应 ECS——这才是完整的云原生交付链路。
 
 ---
 
