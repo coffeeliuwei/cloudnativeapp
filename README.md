@@ -18,6 +18,7 @@
 | [阿里云配置指南](docs/01-aliyun-guide.md) | RDS、MSE Nacos、日志服务、制品库的注册与配置教程 |
 | [快速启动指南](docs/05-quick-start.md) | 零基础手把手启动教程，含常见错误速查 |
 | [EDAS 部署指南](docs/06-edas-deployment.md) | 将微服务部署到 EDAS ECS 集群，实现 Dubbo 服务治理可视化 |
+| [CI/CD 流水线自动化](docs/07-cicd-pipeline.md) | 基于云效 Flow 把"代码提交 → 构建 → 部署"全链路自动化，覆盖 ECS / EDAS / SAE 三条路径与前后端 |
 
 ---
 
