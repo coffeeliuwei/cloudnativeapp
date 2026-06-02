@@ -20,6 +20,7 @@
 | [EDAS 部署指南](docs/06-edas-deployment.md) | 将微服务部署到 EDAS ECS 集群，实现 Dubbo 服务治理可视化 |
 | [CI/CD 流水线自动化](docs/07-cicd-pipeline.md) | 基于云效 Flow 把"代码提交 → 构建 → 部署"全链路自动化，覆盖 ECS / EDAS / SAE 三条路径与前后端 |
 | [云原生应用的内外访问](docs/08-cloud-network-access.md) | 域名/DNS、VPN 网关、智能接入网关 SAG、高速通道、云企业网 CEN 5 种方案的取舍与决策树 |
+| [云原生应用的测试与运维](docs/09-testing-and-ops.md) | PTS / EMAS / 云监控 / ARMS / SLS / QuickBI / DataV 8 个工具的"项目内升级路径" |
 
 ---
 
