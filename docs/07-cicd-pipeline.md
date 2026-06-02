@@ -22,7 +22,7 @@
 2. **操作动作** 用一句话写清楚要做什么
 3. **截图位置** 用 `> 📷 截图：<描述>` 标出来，**学生跟着自己控制台截图对照即可**
 
-> 凡是看到 `📷 截图占位` 的地方，你打开自己的云效控制台找到对应页面，把截图自己补进文档（教学时可以截好一份分发）。**不要相信任何带着多级菜单"顶部 X → 然后点 Y → 再点 Z"的步骤**——那种描述一旦 UI 改版立刻失效。
+> 凡是看到 `📷 截图占位` 的地方，下面紧跟一条 **🔗 官方文档参考链接**——点过去能在阿里云官方页面看到该步骤的真实截图。教学时建议老师自己控制台截一张本地版替换占位（更贴近学生实际看到的）。**不要相信任何带着多级菜单"顶部 X → 然后点 Y → 再点 Z"的描述**——UI 改版立刻失效，请以官方链接里的截图为准。
 
 ---
 
@@ -134,6 +134,7 @@ coffee-front-pipeline-C         （前端 C 走 OSS）
 2. **新建代码库** → 名称 `cloudnativeapp` → 创建
 
    > 📷 截图占位：Codeup 新建代码库页面
+   > 🔗 官方截图参考：[创建代码库 - Codeup](https://help.aliyun.com/zh/yunxiao/user-guide/create-a-code-base)
 
 3. 终端进项目根目录，把云效仓库当作另一个远程推上去：
    ```bash
@@ -146,6 +147,7 @@ coffee-front-pipeline-C         （前端 C 走 OSS）
 4. 回流水线 Flow 首页 → **左侧导航最下方** 有 **⚙ 全局设置**
 
    > 📷 截图占位：左侧导航底部 ⚙ 全局设置 位置（参考你刚发的那张截图最下方）
+   > 🔗 官方截图参考：[服务连接 - 查看入口位置](https://help.aliyun.com/zh/yunxiao/user-guide/service-connection)
 
 5. 进去后右侧会展开多个子项，本章会用到：
    - **服务连接**（加密凭据）
@@ -159,6 +161,7 @@ coffee-front-pipeline-C         （前端 C 走 OSS）
 6. **全局设置 → 服务连接 → 新建服务连接**
 
    > 📷 截图占位：新建服务连接弹窗
+   > 🔗 官方截图参考：[新建服务连接 - 阿里云类型](https://help.aliyun.com/zh/yunxiao/user-guide/service-connection)
 
 7. 在弹窗里选 **阿里云**（类型）→ 下一步
 8. 进 [RAM 控制台](https://ram.console.aliyun.com/users) 用 **子账号** 生成一对 AccessKey ID / Secret（**绝对不要用主账号**），把 AK/SK 填回云效弹窗
@@ -193,10 +196,12 @@ coffee-front-pipeline-C         （前端 C 走 OSS）
 16. 流水线 Flow 首页 → **右上角蓝色"新建流水线"按钮**
 
     > 📷 截图占位：右上角"新建流水线"按钮（参考你刚发的那张截图右上角）
+    > 🔗 官方截图参考：[创建流水线 - 入口与模板](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
 
 17. 弹出 **选择流水线模板** 窗口 → 左侧分类点 **Java** → 选 **"Java · 测试、构建、部署到阿里云 ECS / 自有主机"**
 
     > 📷 截图占位：模板选择弹窗，左侧是语言列表，右侧是各语言模板卡片
+    > 🔗 官方截图参考：[模板选择 - Java 主机部署](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
 
     > **教学说明**：3 条路径都先用这个模板创建，进去后只是把"主机部署"那个任务删掉换成对应的 EDAS / SAE 任务。**所有 Java 流水线选这个模板做起点最省事**。
 
@@ -215,6 +220,7 @@ coffee-front-pipeline-C         （前端 C 走 OSS）
 - 阶段之间的 **"+"** 圈：点它在两个阶段之间加新阶段
 
    > 📷 截图占位：流程配置页全景，标注三处位置（流水线源 / 阶段卡片 / + 加阶段）
+   > 🔗 官方截图参考：[编排流水线的阶段任务与步骤](https://help.aliyun.com/zh/yunxiao/user-guide/process-configuration)
 
 ### 3.3 配置流水线源
 
@@ -257,6 +263,7 @@ coffee-front-pipeline-C         （前端 C 走 OSS）
     - `ALIYUN_REPO_SNAPSHOT_URL` = 同上的 snapshot 仓库地址
 
     > 📷 截图占位：流水线编辑页"变量和缓存" Tab 添加变量界面
+    > 🔗 官方截图参考：[流水线变量和缓存](https://help.aliyun.com/zh/yunxiao/user-guide/manage-pipeline-variables-and-cache)
 
 29. **使用凭据**：在 Java 构建上传任务里勾选 **使用服务连接**（或 "Maven 凭证"）→ 选 Part 2.3 第 12 步建的 `yunxiao-maven`
 
@@ -283,6 +290,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     - **打包路径**：`coffee-*/provider/target/*-1.0-SNAPSHOT.jar`（coffee-app 填 `coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar`）
 
     > 📷 截图占位：构建物上传配置界面
+    > 🔗 官方截图参考：[配置 Java 构建任务 - 构建物上传步骤](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
 
 31. 后面部署任务的 **制品/产物** 下拉里就能选到这个 `app-jar`
 
@@ -301,6 +309,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 32. 进 **全局设置 → 主机组管理** → **新建主机组**
 
     > 📷 截图占位：主机组管理列表 + 新建按钮
+    > 🔗 官方截图参考：[新建主机组](https://help.aliyun.com/zh/yunxiao/user-guide/host-group-management)
 
 33. 填基础信息：
     - **主机组名称**：`coffee-prod-ecs`
@@ -309,6 +318,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 34. 进入主机列表 → **添加主机** → 用 **阿里云 ECS** 子菜单 → 勾选你的 ECS-1 / ECS-2 / ECS-3 → 云效会通过 **阿里云云助手**（不是 SSH）远程在 ECS 上装 Runner
 
     > 📷 截图占位：添加主机弹窗 / 选 ECS 实例
+    > 🔗 官方截图参考：[主机组管理 - 添加主机](https://help.aliyun.com/zh/yunxiao/user-guide/host-group-management)
 
 35. 等约 1-2 分钟，3 台 ECS 状态变 **"在线"**
 
@@ -332,6 +342,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     | **部署脚本** | 见下 |
 
     > 📷 截图占位：主机部署任务配置面板
+    > 🔗 官方截图参考：[接入主机并配置流水线主机部署任务](https://help.aliyun.com/zh/yunxiao/user-guide/host-deployment-1)
 
 39. **部署脚本** 框里粘：
     ```bash
@@ -379,6 +390,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 54. **删掉默认的"主机部署"任务**，原位置点 **"+ 添加任务"** → 在任务列表里搜 **"EDAS"** → 选 **"EDAS 应用发布"**
 
     > 📷 截图占位：添加任务弹窗，搜索 EDAS 后的结果
+    > 🔗 官方截图参考：[构建并部署 Java 应用到 EDAS](https://help.aliyun.com/zh/yunxiao/use-cases/build-and-deploy-edas-kubernetes-java-applications)
 
 55. 配置 **EDAS 应用发布** 任务：
 
@@ -393,6 +405,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     | **JVM 参数 / 启动参数** | **留空**（用 EDAS 应用上已有的配置） |
 
     > 📷 截图占位：EDAS 应用发布任务配置面板
+    > 🔗 官方截图参考：[EDAS 应用发布任务配置](https://help.aliyun.com/zh/yunxiao/use-cases/build-and-deploy-edas-kubernetes-java-applications)
 
 > **常见误区**：JVM 参数填进流水线后会 **覆盖** EDAS 应用的现有配置。留空让 EDAS 沿用 06 章 Part 6.4 填好的 `-DENV=prod -DDB_HOST=...`——这是配置管理的"单一来源"原则：**应用配置只在 EDAS 控制台维护，流水线只管推 jar**。
 
@@ -425,6 +438,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 63. **删掉"主机部署"任务**，原位置 **+ 添加任务** → 搜 **"SAE"** → 选 **"Serverless(SAE)应用发布"**
 
     > 📷 截图占位：搜索 SAE 的任务列表结果
+    > 🔗 官方截图参考：[使用云效流水线构建 Java 应用并部署到 SAE](https://help.aliyun.com/zh/yunxiao/use-cases/java-application-build-and-deploy-sae)
 
 64. 配置 **Serverless(SAE)应用发布** 任务：
 
@@ -440,6 +454,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     | **分批批次间等待时间** | `0` 秒 |
 
     > 📷 截图占位：Serverless(SAE)应用发布任务配置面板
+    > 🔗 官方截图参考：[Serverless(SAE)应用发布任务配置](https://help.aliyun.com/zh/yunxiao/user-guide/sae-application-release)
 
 65. 保存运行
 
@@ -467,6 +482,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 67. **新建流水线** → 模板选 **"Node.js · 测试、构建、部署到阿里云 ECS / 自有主机"**
 
     > 📷 截图占位：Node.js 模板选择
+    > 🔗 官方截图参考：[Node.js 应用构建部署](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-node-js-application-to-a-host)
 
 68. 名字 `coffee-front-pipeline-AB`
 69. **流水线源** 同后端配
@@ -499,6 +515,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
       ```
 
     > 📷 截图占位：前端主机部署配置
+    > 🔗 官方截图参考：[主机部署任务配置](https://help.aliyun.com/zh/yunxiao/user-guide/host-deployment-1)
 
 74. 保存运行 → 浏览器访问 `http://<ECS-3 公网 IP>/` → 看到新版本前端
 
@@ -514,12 +531,14 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     - 读写权限：**公共读**
 
     > 📷 截图占位：OSS 新建 Bucket 表单
+    > 🔗 官方截图参考：[创建存储空间 Bucket](https://help.aliyun.com/zh/oss/user-guide/create-buckets-4)
 
 76. 进 Bucket → 左侧 **基础设置 → 静态页面** → 设置：
     - **默认首页**：`index.html`
     - **默认 404 页**：`index.html`（**SPA 必须这么设，否则刷新页面 404**）
 
     > 📷 截图占位：OSS 静态页面设置
+    > 🔗 官方截图参考：[静态网站托管](https://help.aliyun.com/zh/oss/user-guide/static-website-hosting)
 
 77. 在 Bucket **概览** 页记下 **访问域名**（形如 `xxx.oss-cn-hangzhou.aliyuncs.com`）
 
@@ -543,6 +562,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     - **删除冗余**：是（避免上次的 `js/old.xxx.js` 残留）
 
     > 📷 截图占位：OSS 上传任务配置
+    > 🔗 官方截图参考：[流水线 OSS 上传步骤](https://help.aliyun.com/zh/yunxiao/user-guide/upload-files-to-oss)
 
 84. 保存运行 → 浏览器访问第 77 步的 OSS 访问域名 → 看到前端 ✅
 
@@ -573,6 +593,7 @@ feature/* ──► 不触发，PR 合并到 dev 时人工把关
 85. 进每条流水线 → 顶部 **触发设置 Tab**
 
     > 📷 截图占位：流水线编辑页顶部 Tab 栏（指出"触发设置"位置）
+    > 🔗 官方截图参考：[流水线触发设置](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
 
 86. **代码源触发**：
     - 监听分支：`main`
