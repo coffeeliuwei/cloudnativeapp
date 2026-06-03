@@ -99,9 +99,11 @@
 | 记录类型 | 把什么映射到什么 | 本课程用例 |
 |---------|----------------|-----------|
 | **A 记录** | 域名 → IPv4 地址 | `coffee.example.com → ECS-3 公网 IP` |
-| **CNAME 记录** | 域名 → 另一个域名 | `coffee.example.com → SAE 公网 SLB 域名` |
+| **CNAME 记录** | 域名 → 另一个域名 | （可选进阶）`api.example.com → SAE 公网 SLB 域名` |
 
-> 用 ECS（路径 A/B）走 **A 记录**；用 SAE（路径 C）走 **CNAME 记录**（SAE 公网入口本身就是个 `*.aliyuncs.com` 域名，不是裸 IP）。
+> **本课程三条路径的前端都托管在 ECS-3 的 Nginx 上**（见 12 章 Part 7.2），所以 **用户打开的站点域名一律用 A 记录指向 ECS-3 公网 IP**——路径 A / B / C 都一样。
+>
+> CNAME 在本项目里是 **可选进阶**：路径 C 的前端会把 API 请求发到 **SAE 公网 SLB 域名**（一个 `*.aliyuncs.com` 域名，不是裸 IP），如果你想给这个后端 API 也起个好记的域名（如 `api.example.com`），就用 CNAME 指过去。站点本身的访问不需要它。
 
 ### 2.3 操作：用域名替换前 7 章的 IP
 
@@ -127,7 +129,7 @@
    > 📷 截图占位：云解析 DNS 添加记录界面
    > 🔗 官方截图参考：[添加解析记录](https://help.aliyun.com/zh/dns/add-a-cname-record)
 
-6. **路径 A / B（ECS）** 用 **A 记录**：
+6. **站点域名（三条路径都这样做）** 用 **A 记录** 指向 ECS-3：
 
    | 字段 | 填什么 |
    |------|--------|
@@ -137,13 +139,17 @@
    | 记录值 | ECS-3 的公网 IP |
    | TTL | 10 分钟 |
 
-7. **路径 C（SAE）** 用 **CNAME**：
+   > 前端在三条路径里都托管于 ECS-3 Nginx，所以这一步对路径 A / B / C 完全一致。
+
+7. **（可选，仅路径 C）给后端 API 起个域名** 用 **CNAME**：
 
    | 字段 | 填什么 |
    |------|--------|
    | 记录类型 | CNAME |
-   | 主机记录 | `coffee` |
-   | 记录值 | SAE 公网 SLB 域名（06 章 Part 7.7 复制的那个） |
+   | 主机记录 | `api` （最终域名是 `api.example.com`） |
+   | 记录值 | SAE 公网 SLB 域名（12 章 Part 7.2 用到的那个） |
+
+   > 做了这一步后，前端流水线的 `FRONT_API_URL` 就能填 `http://api.example.com`，而不是那串 `*.aliyuncs.com`。不做也不影响访问——直接用 SAE SLB 原域名即可。
 
 #### 第 4 步：验证
 
@@ -152,10 +158,10 @@
    ```bash
    nslookup coffee.example.com
    ```
-   能看到对应 IP / SLB 域名即成功
+   能看到指向 ECS-3 公网 IP 即成功
 10. 浏览器打开 `http://coffee.example.com` → 看到前端 ✅
 
-> **HTTPS 怎么办**：再多一步——阿里云"SSL 证书"页面 → 申请免费证书 → 验证域名 → 下载证书部署到 ECS 的 Nginx / SAE SLB。免费证书 1 年有效期，到期续签。这部分不展开，留作你查文档练手。
+> **HTTPS 怎么办**：再多一步——阿里云"SSL 证书"页面 → 申请免费证书 → 验证域名 → 下载证书部署到 ECS-3 的 Nginx。免费证书 1 年有效期，到期续签。这部分不展开，留作你查文档练手。
 
 ---
 
@@ -507,13 +513,16 @@ CEN 的计费有两块：
 ```
 互联网用户
     │
-    │  ① http://<公网 IP 或域名>
+    │  ① 打开站点 http://<ECS-3 公网 IP 或域名>（三条路径都在 ECS-3 Nginx 取前端）
     ▼
-ECS-3 公网 IP（路径 A/B）  /  SAE 公网 SLB（路径 C）  ◄── ② Part 2 加域名
+ECS-3 公网 IP（Nginx 托管前端，三路径共用）  ◄── ② Part 2 加域名（A 记录）
+    │
+    ├─ 路径 A/B：前端的 API 打到 ECS-3 上的 coffee-app :8005
+    └─ 路径 C：前端的 API 打到 SAE 公网 SLB 域名（后端 API，可选 CNAME 起友好域名）
     │
     │  内网调用（同 VPC）
     ▼
-ECS-1 / ECS-2 / RDS / MSE Nacos
+ECS-1 / ECS-2 / RDS / MSE Nacos  （路径 C 后端换成 SAE 实例）
     ▲
     │  ③ 你本地电脑临时用公网白名单
     │     （第 6 章 Part 3.3 的权宜做法）
@@ -525,7 +534,7 @@ ECS-1 / ECS-2 / RDS / MSE Nacos
 
 | 当前做法 | 本章对应升级 |
 |---------|------------|
-| ① 用户直接 IP / SLB 地址访问 | **Part 2** 加域名 + HTTPS |
+| ① 用户直接用 ECS-3 公网 IP 访问站点 | **Part 2** 加域名（A 记录）+ HTTPS |
 | ② 本地电脑灌 RDS 数据走外网地址 | **Part 3** VPN 网关 + 走 RDS 内网 |
 | ③ MSE Nacos 公网白名单 `0.0.0.0/0` | **Part 3** VPN 后只放本地网段 |
 | ④ 多分支办公室都要接 | **Part 4** SAG |

@@ -4,13 +4,14 @@
 >
 > **本章特色**：**6 条流水线全景图**——3 个后端微服务 × 3 条上云路径 + 1 条前端流水线，对应第 11 章每一个手工步骤。
 
+> ⭐ **这是本课程推荐的"正式"构建发布方式。** 第 11 章手敲的 `mvn deploy/package`、scp 上传、`manage.sh restart` 等命令，都是为了让你**理解原理**；真正日常迭代请用本章的流水线——`git push` 之后在网页上点几下，构建和发布全自动，**不用再手敲任何命令**。这与本课程"能点鼠标就不敲键盘"的主线一致。**后端推荐用路径 B（EDAS）流水线作默认**；路径 A 流水线属于进阶（对应第 11 章进阶的 ECS 手工部署）。
+
 | 流水线 | 触发分支 | 构建什么 | 部署到哪 | 在哪一节 |
 |--------|---------|---------|----------|---------|
 | **后端 × 路径 A** | `main` | 3 个微服务 jar | 主机部署到 3 台 ECS + manage.sh restart | Part 4 |
 | **后端 × 路径 B** | `main` | 3 个微服务 jar | EDAS 应用发布 | Part 5 |
 | **后端 × 路径 C** | `main` | 3 个微服务 jar | Serverless(SAE)应用发布 | Part 6 |
-| **前端 × 路径 A/B** | `main` | Vue dist | 主机部署到 ECS-3 + nginx -s reload | Part 7.1 |
-| **前端 × 路径 C** | `main` | Vue dist | OSS 上传 | Part 7.2 |
+| **前端（三路径共用）** | `main` | Vue dist | 主机部署到 ECS-3 + nginx -s reload | Part 7 |
 
 ---
 
@@ -38,7 +39,7 @@
 | 终端粘 `cd ~/coffee && ./manage.sh restart` | **"主机部署"的"部署脚本"框自动跑** | Part 4 |
 | EDAS 控制台点 "部署应用" 上传新 jar | **"EDAS 应用发布"任务自动调 API** | Part 5 |
 | SAE 控制台点 "部署应用" 上传新 jar | **"Serverless(SAE)应用发布"任务自动调 API** | Part 6 |
-| 本地 `npm run build` + 上传 dist | **"Node.js 构建上传" + "主机部署"或"OSS 上传"** | Part 7 |
+| 本地 `npm run build` + 上传 dist | **"Node.js 构建上传" + "主机部署"** | Part 7 |
 
 ---
 
@@ -72,8 +73,7 @@ coffee-userorder-pipeline-B    （路径 B 后端·订单服务）
 coffee-userorder-pipeline-C    （路径 C 后端·订单服务）
 coffee-expresstrack-pipeline-A / B / C
 coffee-app-pipeline-A / B / C
-coffee-front-pipeline-AB        （前端，A/B 共用一条）
-coffee-front-pipeline-C         （前端 C 走 OSS）
+coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 ```
 
 > 教学演示挑一条路径建 3 条后端 + 1 条前端就够。这里列全是让你看清"流水线 = 微服务 × 路径"的组合维度。
@@ -156,7 +156,7 @@ coffee-front-pipeline-C         （前端 C 走 OSS）
 
 ### 2.3 建 2 个服务连接
 
-#### 服务连接 1：阿里云访问凭证（路径 B / C 部署 + 前端 OSS 用）
+#### 服务连接 1：阿里云访问凭证（路径 B / C 部署用）
 
 6. **全局设置 → 服务连接 → 新建服务连接**
 
@@ -177,10 +177,9 @@ coffee-front-pipeline-C         （前端 C 走 OSS）
 ### 2.4 给 RAM 子账号授必要权限
 
 13. 还在 RAM 控制台 → 找到第 8 步那个子账号 → **权限管理 → 新增授权**
-14. 系统策略里搜并勾选这 3 个：
+14. 系统策略里搜并勾选这 2 个：
     - `AliyunEDASFullAccess`（路径 B 用）
     - `AliyunSAEFullAccess`（路径 C 用）
-    - `AliyunOSSFullAccess`（前端走 OSS 时用）
 15. 确定授权
 
 > **为什么必须用子账号 AK**：主账号 AK 一旦泄露损失巨大，云效流水线日志是可下载的——任何把 AK 写在日志里的失误都会变成事故。**子账号 + 最小权限** 是任何 CI/CD 体系的硬铁律。
@@ -470,21 +469,23 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 
 ## Part 7 前端流水线 — Vue 构建 + 发布
 
-前端构建是一回事，**发布到哪取决于后端走哪条路径**：
+前端构建对三条路径完全一样，**发布也统一到 ECS-3 的 Nginx**——只有"前端把 API 发到哪个后端地址"随路径不同：
 
-| 前端走哪 | 配套 | 静态文件托管在 |
-|---------|-----|--------------|
-| **路径 A / B 配套** | 后端在 ECS / EDAS | **ECS-3 的 Nginx**（同台机器） |
-| **路径 C 配套** | 后端在 SAE | **OSS 静态网站托管**（最纯 Serverless） |
+| 前端走哪 | 后端在 | 静态文件托管在 | `FRONT_API_URL` 填什么 |
+|---------|-----|--------------|----------------------|
+| **路径 A / B 配套** | ECS / EDAS | **ECS-3 的 Nginx** | `http://<ECS-3 公网 IP>:8005` |
+| **路径 C 配套** | SAE | **ECS-3 的 Nginx**（同一条流水线） | SAE 公网 SLB 域名 |
 
-### 7.1 前端流水线 A/B 共用版（推到 ECS-3 Nginx）
+> **为什么路径 C 也用 Nginx 而不用 OSS？** 走 SAE 时后端没有"跑 coffee-app 的 ECS-3"了，但前端只是几十个静态文件，**留一台最小规格 ECS 跑 Nginx 托管前端**即可——这样三条路径的前端发布**完全复用 06 章 Part 8 已经讲过的 Nginx 部署**，不必再引入 OSS Bucket、静态网站托管、CORS 跨域这一整套额外知识。教学上"前端只讲一次"，认知负担最低。
+
+### 7.1 前端流水线（三路径共用，推到 ECS-3 Nginx）
 
 67. **新建流水线** → 模板选 **"Node.js · 测试、构建、部署到阿里云 ECS / 自有主机"**
 
     > 📷 截图占位：Node.js 模板选择
     > 🔗 官方截图参考：[Node.js 应用构建部署](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-node-js-application-to-a-host)
 
-68. 名字 `coffee-front-pipeline-AB`
+68. 名字 `coffee-front-pipeline`
 69. **流水线源** 同后端配
 70. **Node.js 构建上传** 任务：
 
@@ -502,8 +503,11 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     npm ci && \
     VUE_APP_BASE_URL=$FRONT_API_URL npm run build
     ```
-72. **变量和缓存 Tab** 加：
-    - `FRONT_API_URL` = `http://<ECS-3 公网 IP>:8005`（和 06 章 Part 8.1 是同一个值）
+72. **变量和缓存 Tab** 加 `FRONT_API_URL`，**值随后端路径不同**：
+    - **路径 A / B**：`http://<ECS-3 公网 IP>:8005`（和 06 章 Part 8.1 是同一个值）
+    - **路径 C（SAE）**：填 SAE 的 **公网 SLB 域名**（06 章 Part 7.7 创建的，无端口号，SLB 默认 80）
+
+    > 三条路径**共用这一条前端流水线**，切换后端时只需把 `FRONT_API_URL` 改成对应地址，重跑一次即可——构建产物和"主机部署到 ECS-3"这两步完全不变。
 73. **主机部署** 任务：
     - 主机组：`coffee-prod-ecs`，过滤 ECS-3
     - 下载路径：`/usr/share/nginx/html/dist.tar.gz`（或 `/usr/share/nginx/html/`，取决于云效对 dist 文件夹的打包方式）
@@ -517,64 +521,30 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     > 📷 截图占位：前端主机部署配置
     > 🔗 官方截图参考：[主机部署任务配置](https://help.aliyun.com/zh/yunxiao/user-guide/host-deployment-1)
 
+    > **ECS-3 用宝塔镜像的同学注意**：宝塔的网站根目录不是 `/usr/share/nginx/html`，而是 **`/www/wwwroot/<你的站点名>`**（在宝塔「网站」列表里能看到该站点的根目录）。把上面下载路径和部署脚本里的 `/usr/share/nginx/html` 全部换成你的站点根目录即可；`nginx -s reload` 宝塔环境同样可用。手工部署（11 章 Part 8.3 方式 A）时本来就在面板里点鼠标，不涉及这条路径。
+
 74. 保存运行 → 浏览器访问 `http://<ECS-3 公网 IP>/` → 看到新版本前端
 
-### 7.2 前端流水线 C 版（推到 OSS 静态网站托管）
+### 7.2 路径 C（SAE）的前端怎么发——还是这条流水线
 
-走 SAE 路径时后端没有"固定 ECS-3"了，前端最佳搭档是 **OSS 静态网站托管**。
+走 SAE 路径时后端没有"跑 coffee-app 的 ECS-3"了，但前端是纯静态文件，**留一台最小规格 ECS 跑 Nginx 托管**即可，发布流程和 7.1 **一模一样**，不需要单独建第二条流水线。只改一个变量：
 
-#### 第 1 步：先一次性手工开通 OSS 静态托管
+75. 回 SAE → `coffee-app-sae` 详情 → 应用访问设置 → 复制 **公网 SLB 域名**（06 章 Part 7.7 创建的）
+76. 进 `coffee-front-pipeline` → **变量和缓存 Tab** → 把 `FRONT_API_URL` 改成上一步的 **SAE 公网 SLB 域名**（无端口号，SLB 默认 80）
+77. 重跑流水线 → 浏览器访问 `http://<ECS-3 公网 IP>/` → 前端打开，且所有 API 打到 SAE SLB ✅
 
-75. 阿里云控制台搜 OSS → **新建 Bucket**：
-    - 名称：`coffee-front-prod-<随机后缀>`
-    - 区域：和 SAE 同区
-    - 读写权限：**公共读**
+> **为什么不用 OSS？** OSS 静态网站托管会牵出 Bucket 读写权限、静态页面 404 兜底、以及"前端域名 ≠ 后端域名"导致的 **CORS 跨域**——这些都是为了讲 OSS 才额外冒出来的知识点。用 ECS-3 + Nginx 托管前端，前端和后端入口在用户看来是**同源同 IP**，跨域问题天然不存在，学生把 06 章 Part 8 学过的 Nginx 部署原样再用一次即可。**教学项目永远优先"少引入一个概念"。**
 
-    > 📷 截图占位：OSS 新建 Bucket 表单
-    > 🔗 官方截图参考：[创建存储空间 Bucket](https://help.aliyun.com/zh/oss/user-guide/create-buckets-4)
-
-76. 进 Bucket → 左侧 **基础设置 → 静态页面** → 设置：
-    - **默认首页**：`index.html`
-    - **默认 404 页**：`index.html`（**SPA 必须这么设，否则刷新页面 404**）
-
-    > 📷 截图占位：OSS 静态页面设置
-    > 🔗 官方截图参考：[静态网站托管](https://help.aliyun.com/zh/oss/user-guide/static-website-hosting)
-
-77. 在 Bucket **概览** 页记下 **访问域名**（形如 `xxx.oss-cn-hangzhou.aliyuncs.com`）
-
-#### 第 2 步：把 SAE 公网 SLB 域名告诉前端
-
-78. 回 SAE → `coffee-app-sae` 详情 → 应用访问设置 → 复制 **公网 SLB 域名**（06 章 Part 7.7 创建的）
-
-#### 第 3 步：创建 C 版前端流水线
-
-79. **新建流水线** → 仍选 **Node.js 模板**（进去把"主机部署"换成 OSS 上传）
-80. 名字 `coffee-front-pipeline-C`
-81. 构建任务同 Part 7.1 第 70-71 步，**但 `FRONT_API_URL` 改成 SAE 公网 SLB 域名**：
-    - `FRONT_API_URL` = `http://<SAE 公网 SLB 域名>`（无端口号，SAE SLB 默认 80）
-82. **删掉"主机部署"任务**，原位置 **+ 添加任务** → 搜 **"OSS"** → 选 **"OSS 上传"**
-83. 配置：
-    - **服务连接**：选 `aliyun-ak`
-    - **Bucket**：第 75 步那个
-    - **本地路径**：选构建产物 `dist`
-    - **远程路径**：`/`
-    - **覆盖同名**：是
-    - **删除冗余**：是（避免上次的 `js/old.xxx.js` 残留）
-
-    > 📷 截图占位：OSS 上传任务配置
-    > 🔗 官方截图参考：[流水线 OSS 上传步骤](https://help.aliyun.com/zh/yunxiao/user-guide/upload-files-to-oss)
-
-84. 保存运行 → 浏览器访问第 77 步的 OSS 访问域名 → 看到前端 ✅
+> **成本提示**：路径 C 若纯粹为托管前端而保留一台 ECS，会削弱"连 ECS 都不用"的卖点。教学场景里这台 ECS 通常就复用你跑过路径 A/B 时买的 ECS-3，不额外花钱；真要做"纯 Serverless 前端"是 OSS / CDN 的活儿，属于前端工程化范畴，本课程不展开。
 
 ### 7.3 关于 HTTPS 和自定义域名
 
-> 教学版到 Part 7.2 就足够 demo。生产环境前端通常还要：
+> 教学版到这里就足够 demo。生产环境前端通常还要：
 >
-> - 自定义域名（CNAME 到 OSS 访问域名）
+> - 自定义域名（A 记录指向 ECS-3 公网 IP，见 08 章 Part 2）
 > - 阿里云 CDN 接入（加速 + HTTPS 证书）
-> - 跨域：SAE 后端的 `coffee-app` 要把 OSS 域名加进 CORS 白名单
 >
-> 这三件事属于"前端工程化"范畴，本课程不展开。
+> 这两件事属于"前端工程化"范畴，本课程不展开。
 
 ---
 
@@ -590,12 +560,12 @@ feature/* ──► 不触发，PR 合并到 dev 时人工把关
 
 ### 8.2 在云效里配置触发器
 
-85. 进每条流水线 → 顶部 **触发设置 Tab**
+78. 进每条流水线 → 顶部 **触发设置 Tab**
 
     > 📷 截图占位：流水线编辑页顶部 Tab 栏（指出"触发设置"位置）
     > 🔗 官方截图参考：[流水线触发设置](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
 
-86. **代码源触发**：
+79. **代码源触发**：
     - 监听分支：`main`
     - 监听事件：Push 事件
     - **路径过滤**（可选但强烈推荐）：让每条流水线只在相关代码改动时触发
@@ -620,9 +590,9 @@ feature/* ──► 不触发，PR 合并到 dev 时人工把关
 
 ### 9.1 部署前人工卡点（审批）
 
-87. 流水线 **部署阶段前** 加一个新阶段 → **+ 添加任务** → 搜 **"人工卡点"** / **"人工审核"**
-88. 配置审批人（钉钉号 / 邮箱），超时拒绝
-89. 流水线跑到这一步会暂停，等审批通过才往下走
+80. 流水线 **部署阶段前** 加一个新阶段 → **+ 添加任务** → 搜 **"人工卡点"** / **"人工审核"**
+81. 配置审批人（钉钉号 / 邮箱），超时拒绝
+82. 流水线跑到这一步会暂停，等审批通过才往下走
 
 ### 9.2 灰度发布（路径 B / C 适用）
 
@@ -645,8 +615,7 @@ feature/* ──► 不触发，PR 合并到 dev 时人工把关
 | `coffee-userorder-pipeline-C` | Java 主机部署（替换任务） | 同上 | Serverless(SAE)应用发布 | SAE 应用 `userorder-sae` |
 | `coffee-expresstrack-pipeline-*` | 同上三条 | `coffee-expresstrack/provider` | 同对应类型 | ECS-2 / EDAS / SAE |
 | `coffee-app-pipeline-*` | 同上三条 | `coffee-app` | 同对应类型 | ECS-3 / EDAS / SAE |
-| `coffee-front-pipeline-AB` | Node.js 主机部署 | （Node 构建） | 主机部署 | ECS-3 `/usr/share/nginx/html/` |
-| `coffee-front-pipeline-C` | Node.js 主机部署（替换任务） | 同上 | OSS 上传 | OSS Bucket |
+| `coffee-front-pipeline`（三路径共用） | Node.js 主机部署 | （Node 构建） | 主机部署 | ECS-3 `/usr/share/nginx/html/` |
 | `coffee-libs-pipeline`（可选） | Java 自定义 | `coffee-common,...api,...api` | （不部署，只 deploy 到 Maven 仓库） | 云效 Maven 制品仓库 |
 
 ---
@@ -703,17 +672,13 @@ EDAS Agent 拉取 jar 太慢或失败。进 EDAS 应用 → 变更记录 → 看
 
 ### 前端流水线问题
 
-**Q：浏览器打开 OSS 域名是 XML 而不是页面**
+**Q：路径 C 切换后前端打开了，但 API 全部失败**
 
-第 76 步"静态页面"没设。回 OSS Bucket → 基础设置 → 静态页面 → 设默认首页 `index.html`。
+`FRONT_API_URL` 还停在路径 A/B 的 `http://<ECS-3 IP>:8005`。回 Part 7.2 第 76 步，把它改成 SAE 公网 SLB 域名后重跑前端流水线。F12 → Network 看请求地址是不是打到了 SAE SLB。
 
-**Q：前端打开后所有 API 报 CORS 跨域错误**
+**Q：前端构建后 `nginx -s reload` 报 `nginx not found`**
 
-后端 coffee-app 没把前端域名加进 CORS 白名单。改 `coffee-app/src/main/.../CorsConfig.java` 把 OSS 域名 / SLB 域名加进 `allowedOrigins`，重跑后端流水线。
-
-**Q：路径 A 前端构建后 `nginx -s reload` 报 `nginx not found`**
-
-ECS-3 没装 Nginx 或 `nginx` 不在 root 的 PATH 里。回 06 章 Part 8.4 确认 Nginx 安装；或部署脚本里写绝对路径 `/usr/sbin/nginx -s reload`。
+ECS-3 没装 Nginx 或 `nginx` 不在 root 的 PATH 里。**宝塔镜像**本来自带 Nginx，多半是 `nginx` 命令不在 PATH——用宝塔自己的 reload（面板里重载，或绝对路径 `/www/server/nginx/sbin/nginx -s reload`）；**裸镜像**则回 06 章 Part 8.4（方式 B）确认已 `apt/dnf install nginx`，或部署脚本里写绝对路径 `/usr/sbin/nginx -s reload`。
 
 ---
 
