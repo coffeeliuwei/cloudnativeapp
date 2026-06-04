@@ -463,7 +463,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 
 ### 6.5 SAE 流水线的"冷启动注意"
 
-> 如果 coffee-app-sae **缩到 0 实例**（06 章 Part 7.6 那个设置），流水线部署完毕后再过几秒才能访问——SAE 收到第一个请求时才真正拉起实例。教学演示前最好手动 `curl` 一次预热。
+> SAE 应用在**新部署/重启后**，实例要现拉镜像、启 JVM，流水线部署完毕后首次访问会等几秒（冷启动正常现象）。教学演示前最好手动 `curl` 一次预热。
 
 ---
 
@@ -474,9 +474,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 | 前端走哪 | 后端在 | 静态文件托管在 | `FRONT_API_URL` 填什么 |
 |---------|-----|--------------|----------------------|
 | **路径 A / B 配套** | ECS / EDAS | **ECS-3 的 Nginx** | `http://<ECS-3 公网 IP>:8005` |
-| **路径 C 配套** | SAE | **ECS-3 的 Nginx**（同一条流水线） | SAE 公网 SLB 域名 |
+| **路径 C 配套** | SAE | **ECS-3 的 Nginx**（同一条流水线） | SAE 公网 CLB 域名 |
 
-> **为什么路径 C 也用 Nginx 而不用 OSS？** 走 SAE 时后端没有"跑 coffee-app 的 ECS-3"了，但前端只是几十个静态文件，**留一台最小规格 ECS 跑 Nginx 托管前端**即可——这样三条路径的前端发布**完全复用 06 章 Part 8 已经讲过的 Nginx 部署**，不必再引入 OSS Bucket、静态网站托管、CORS 跨域这一整套额外知识。教学上"前端只讲一次"，认知负担最低。
+> **为什么路径 C 也用 Nginx 而不用 OSS？** 走 SAE 时后端没有"跑 coffee-app 的 ECS-3"了，但前端只是几十个静态文件，**留一台最小规格 ECS 跑 Nginx 托管前端**即可——这样三条路径的前端发布**完全复用 06 章 Part 8 已经讲过的 Nginx 部署**，不必再引入 OSS Bucket、静态网站托管、静态页 404 兜底这一整套额外知识。教学上"前端只讲一次"，认知负担最低。
 
 ### 7.1 前端流水线（三路径共用，推到 ECS-3 Nginx）
 
@@ -505,7 +505,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     ```
 72. **变量和缓存 Tab** 加 `FRONT_API_URL`，**值随后端路径不同**：
     - **路径 A / B**：`http://<ECS-3 公网 IP>:8005`（和 06 章 Part 8.1 是同一个值）
-    - **路径 C（SAE）**：填 SAE 的 **公网 SLB 域名**（06 章 Part 7.7 创建的，无端口号，SLB 默认 80）
+    - **路径 C（SAE）**：填 SAE 的 **公网 CLB 域名**（06 章 Part 7.7 创建的，无端口号，CLB 默认 80）
 
     > 三条路径**共用这一条前端流水线**，切换后端时只需把 `FRONT_API_URL` 改成对应地址，重跑一次即可——构建产物和"主机部署到 ECS-3"这两步完全不变。
 73. **主机部署** 任务：
@@ -529,11 +529,13 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 
 走 SAE 路径时后端没有"跑 coffee-app 的 ECS-3"了，但前端是纯静态文件，**留一台最小规格 ECS 跑 Nginx 托管**即可，发布流程和 7.1 **一模一样**，不需要单独建第二条流水线。只改一个变量：
 
-75. 回 SAE → `coffee-app-sae` 详情 → 应用访问设置 → 复制 **公网 SLB 域名**（06 章 Part 7.7 创建的）
-76. 进 `coffee-front-pipeline` → **变量和缓存 Tab** → 把 `FRONT_API_URL` 改成上一步的 **SAE 公网 SLB 域名**（无端口号，SLB 默认 80）
-77. 重跑流水线 → 浏览器访问 `http://<ECS-3 公网 IP>/` → 前端打开，且所有 API 打到 SAE SLB ✅
+75. 回 SAE → `coffee-app-sae` 详情 → 应用访问设置 → 复制 **公网 CLB 域名**（06 章 Part 7.7 创建的）
+76. 进 `coffee-front-pipeline` → **变量和缓存 Tab** → 把 `FRONT_API_URL` 改成上一步的 **SAE 公网 CLB 域名**（无端口号，CLB 默认 80）
+77. 重跑流水线 → 浏览器访问 `http://<ECS-3 公网 IP>/` → 前端打开，且所有 API 打到 SAE CLB ✅
 
-> **为什么不用 OSS？** OSS 静态网站托管会牵出 Bucket 读写权限、静态页面 404 兜底、以及"前端域名 ≠ 后端域名"导致的 **CORS 跨域**——这些都是为了讲 OSS 才额外冒出来的知识点。用 ECS-3 + Nginx 托管前端，前端和后端入口在用户看来是**同源同 IP**，跨域问题天然不存在，学生把 06 章 Part 8 学过的 Nginx 部署原样再用一次即可。**教学项目永远优先"少引入一个概念"。**
+> **为什么不用 OSS？** OSS 静态网站托管会牵出 Bucket 读写权限、静态页面 404 兜底等额外知识点。用 ECS-3 + Nginx 托管前端，学生把 06 章 Part 8 学过的 Nginx 部署原样再用一次即可。**教学项目永远优先"少引入一个概念"。**
+>
+> （**跨域(CORS)说明**：无论用 OSS 还是 ECS-3 Nginx，前端页面与后端 API 都**不同源**（端口或域名不同），跨域真实存在——它不是 OSS 引入的。本项目由网关 coffee-app 的 `@CrossOrigin` 在网关层统一放行，前端不必额外处理。）
 
 > **成本提示**：路径 C 若纯粹为托管前端而保留一台 ECS，会削弱"连 ECS 都不用"的卖点。教学场景里这台 ECS 通常就复用你跑过路径 A/B 时买的 ECS-3，不额外花钱；真要做"纯 Serverless 前端"是 OSS / CDN 的活儿，属于前端工程化范畴，本课程不展开。
 
@@ -668,13 +670,13 @@ EDAS Agent 拉取 jar 太慢或失败。进 EDAS 应用 → 变更记录 → 看
 
 **Q：发布完后 30 秒还连不上**
 
-如果 06 章 Part 7.6 把网关缩到 0 实例——这是 SAE 冷启动正常现象。手动 `curl <SLB 域名>/actuator/health` 触发一次预热。
+SAE 应用新部署后首次访问的冷启动正常现象（现拉镜像、启 JVM）。手动 `curl <CLB 域名>/actuator/health` 触发一次预热。
 
 ### 前端流水线问题
 
 **Q：路径 C 切换后前端打开了，但 API 全部失败**
 
-`FRONT_API_URL` 还停在路径 A/B 的 `http://<ECS-3 IP>:8005`。回 Part 7.2 第 76 步，把它改成 SAE 公网 SLB 域名后重跑前端流水线。F12 → Network 看请求地址是不是打到了 SAE SLB。
+`FRONT_API_URL` 还停在路径 A/B 的 `http://<ECS-3 IP>:8005`。回 Part 7.2 第 76 步，把它改成 SAE 公网 CLB 域名后重跑前端流水线。F12 → Network 看请求地址是不是打到了 SAE CLB。
 
 **Q：前端构建后 `nginx -s reload` 报 `nginx not found`**
 
