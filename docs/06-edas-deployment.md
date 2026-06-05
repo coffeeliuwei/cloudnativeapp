@@ -681,7 +681,23 @@ cd ../../coffee-app && mvn clean package -DskipTests
 
 **对照本地(第 05 章)**:你之前在一台笔记本开 3 个终端窗口分别 `java -jar`。**现在把这 3 个进程分散到 3 台 ECS**,每台跑一个。代码完全不改,只是把"3 个终端"换成"3 台机器"。
 
-### 5.1 先在本地改好 3 个配置文件
+> ### 📝 动手前先记住：路径 A 你总共只需要改 **3 个文件、5 处值**
+>
+> 下面后续所有命令、上传、脚本**一律照抄不用改**；唯一要你亲手填的就是这张表里的值——而且**全部来自 Part 3 准备资源时记下的**：
+>
+> | 要改的文件 | 改哪几处 | 填什么（来源） |
+> |---|---|---|
+> | `deploy/manage.sh` | `NACOS_ADDR`（约第 22 行，**1 处**） | 你的 **MSE Nacos 地址**，结尾带 `:8848`（Part 3.3 记的） |
+> | `deploy/config/userorder/application-dev.yml` | `user` / `password` / `host`（**3 处**） | 你的 **RDS 账号 / 密码 / 地址**（`host` 结尾保留 `:3306`）（Part 3.2 记的） |
+> | `deploy/config/expresstrack/application-dev.yml` | `user` / `password` / `host`（**3 处，和 userorder 填一样的**） | 与 userorder **同一套 RDS 账号/密码/地址** |
+>
+> **几个不用改的点，先打消顾虑：**
+> - **网关 coffee-app 不连数据库**——没有它的配置文件要改，它只用到 `manage.sh` 里的 `NACOS_ADDR`。
+> - 两个 `application-dev.yml` 里的 `dbname`（`userordertest` / `expresstracktest`）**已经填好，不要动**。
+> - 3 台 ECS 用的是**同一份 `manage.sh`**（脚本自动识别本机有哪个 jar），所以 `manage.sh` 只改 `NACOS_ADDR` 这 1 处、改一次即可。
+> - jar 包、目录路径、所有终端命令**全部照抄**。
+
+### 5.1 先在本地改好 3 个文件（就上面那 5 处值）
 
 为了避免后面在 ECS 上用 vim 编辑文件,**所有配置改动都在你本机用 VSCode 改完,然后整个文件上传**。
 
