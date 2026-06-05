@@ -687,7 +687,7 @@ cd ../../coffee-app && mvn clean package -DskipTests
 >
 > | 要改的文件 | 改哪几处 | 填什么（来源） |
 > |---|---|---|
-> | `deploy/manage.sh` | `NACOS_ADDR`（约第 22 行，**1 处**） | 你的 **MSE Nacos 地址**，结尾带 `:8848`（Part 3.3 记的） |
+> | `deploy/manage.sh` | `NACOS_ADDR`（约第 22 行，**1 处**） | 你的 **MSE Nacos 内网地址**，结尾带 `:8848`（Part 3.3 记的；ECS 与 MSE 同 VPC 走内网，公网地址是给本地调试用的，ECS 上别填） |
 > | `deploy/config/userorder/application-dev.yml` | `user` / `password` / `host`（**3 处**） | 你的 **RDS 账号 / 密码 / 地址**（`host` 结尾保留 `:3306`）（Part 3.2 记的） |
 > | `deploy/config/expresstrack/application-dev.yml` | `user` / `password` / `host`（**3 处，和 userorder 填一样的**） | 与 userorder **同一套 RDS 账号/密码/地址** |
 >
@@ -827,6 +827,8 @@ cd ../../coffee-app && mvn clean package -DskipTests
 cd ~/coffee && ./manage.sh status    # 看进程在不在跑
 cd ~/coffee && ./manage.sh logs      # 看启动日志(Ctrl+C 退出)
 ```
+
+> 💡 **日志里报连不上 Nacos（`failed to connect to nacos`）**：多半是 MSE 的 **内网白名单** 没放行 ECS 的私网网段。回 MSE 控制台 → 实例详情 → **网络配置 → 内网白名单**，把 ECS 所在 VPC 的网段（如 `172.16.0.0/16`）加进去即可（做法和 7.4 给 SAE 加 VSwitch 网段一样）。
 
 ### 5.8 日常管理
 
