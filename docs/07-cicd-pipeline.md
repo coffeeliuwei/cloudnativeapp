@@ -200,8 +200,9 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 
 17. 弹出 **选择流水线模板** 窗口 → 左侧分类点 **Java** → 选 **"Java · 测试、构建、部署到阿里云 ECS / 自有主机"**
 
-    > 📷 截图占位：模板选择弹窗，左侧是语言列表，右侧是各语言模板卡片
-    > 🔗 官方截图参考：[模板选择 - Java 主机部署](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
+    ![云效新建流水线模板选择弹窗](img/yunxiao-template-select.png)
+    > △ 官方文档截图：模板选择弹窗——左侧按语言分类，点 Java 后在右侧卡片里找模板
+    > 🔗 官方文档：[模板选择 - Java 主机部署](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
 
     > **教学说明**：3 条路径都先用这个模板创建，进去后只是把"主机部署"那个任务删掉换成对应的 EDAS / SAE 任务。**所有 Java 流水线选这个模板做起点最省事**。
 
@@ -219,8 +220,9 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 - 后面每个 **阶段** 卡片：点 **"+ 添加任务"** 加任务
 - 阶段之间的 **"+"** 圈：点它在两个阶段之间加新阶段
 
-   > 📷 截图占位：流程配置页全景，标注三处位置（流水线源 / 阶段卡片 / + 加阶段）
-   > 🔗 官方截图参考：[编排流水线的阶段任务与步骤](https://help.aliyun.com/zh/yunxiao/user-guide/process-configuration)
+   ![云效流程配置页：左侧流水线源、中间阶段卡片、右侧任务配置抽屉](img/yunxiao-flow-java-build.png)
+   > △ 官方文档截图：流程配置页全景——左侧测试/构建/部署三段，点中某任务（红框"Java 构建上传"）右侧弹出它的配置
+   > 🔗 官方文档：[编排流水线的阶段任务与步骤](https://help.aliyun.com/zh/yunxiao/user-guide/process-configuration)
 
 ### 3.3 配置流水线源
 
@@ -230,6 +232,9 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 22. **默认分支** 填 `main`
 23. **触发方式** 勾选 **Push 触发**（先勾，Part 8 再细调）
 24. 保存
+
+    ![云效流水线源配置面板](img/yunxiao-pipeline-source.png)
+    > △ 官方文档截图：点最左侧"添加/流水线源"后右侧的代码源配置面板——选代码源类型、仓库、分支都在这里
 
 ### 3.4 配置"Java 构建上传"任务
 
@@ -289,8 +294,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     - **制品名称**：`app-jar`
     - **打包路径**：`coffee-*/provider/target/*-1.0-SNAPSHOT.jar`（coffee-app 填 `coffee-app/target/coffee-app-0.0.1-SNAPSHOT.jar`）
 
-    > 📷 截图占位：构建物上传配置界面
-    > 🔗 官方截图参考：[配置 Java 构建任务 - 构建物上传步骤](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
+    ![云效"构建物上传"步骤配置](img/yunxiao-artifact-upload.png)
+    > △ 官方文档截图："Java 构建上传"任务里的「构建物上传」步骤——制品名称、打包路径就填在红框这两栏
+    > 🔗 官方文档：[配置 Java 构建任务 - 构建物上传步骤](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
 
 31. 后面部署任务的 **制品/产物** 下拉里就能选到这个 `app-jar`
 
@@ -353,6 +359,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     ```
 40. 保存 → 点 **运行** 测试一次 → 看每个任务变绿
 
+    ![云效保存并运行弹窗](img/yunxiao-run-config.png)
+    > △ 官方文档截图：右上角"保存并运行"后的运行配置弹窗，确认分支后点"运行"
+
 ### 4.3 复制 expresstrack 和 coffee-app 流水线
 
 41. 流水线列表对 `coffee-userorder-pipeline-A` 点 **⋯ → 复制**
@@ -369,6 +378,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 44. 在本地随便改一行 `coffee-userorder/provider/.../OrderServiceImpl.java`（比如改一句日志）
 45. `git add . && git commit -m "test pipeline" && git push codeup main`
 46. **看云效流水线列表**：`coffee-userorder-pipeline-A` 自动开跑 → 约 90 秒后绿色 ✅
+
+    ![云效流水线运行成功页面](img/yunxiao-run-success.png)
+    > △ 官方文档截图：跑完应该长这样——测试、构建、部署每个任务卡片都打绿勾
 47. 回 ECS-1 会话管理终端：`tail -50 ~/coffee/logs/userorder.log` → 应能看到刚改的那行日志
 
 🎉 第一条 CI/CD 链路打通——从你按下 `git push` 到生产环境跑起新版本，**全程零手工**。
@@ -392,8 +404,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 53. 完成代码源、构建、构建物上传配置（构建命令、`app-jar` 都和 A 版一样）
 54. **删掉默认的"主机部署"任务**，原位置点 **"+ 添加任务"** → 在任务列表里搜 **"EDAS"** → 选 **"EDAS 应用发布"**
 
-    > 📷 截图占位：添加任务弹窗，搜索 EDAS 后的结果
-    > 🔗 官方截图参考：[构建并部署 Java 应用到 EDAS](https://help.aliyun.com/zh/yunxiao/use-cases/build-and-deploy-edas-kubernetes-java-applications)
+    ![云效添加任务抽屉：部署分类下的 EDAS 任务](img/yunxiao-add-task-deploy.png)
+    > △ 官方文档截图：点阶段里的 "+" 后右侧弹出任务列表，左侧分类选"部署"或直接搜索（橙框处即 EDAS 发布任务）
+    > 🔗 官方文档：[构建并部署 Java 应用到 EDAS](https://help.aliyun.com/zh/yunxiao/use-cases/build-and-deploy-edas-kubernetes-java-applications)
 
 55. 配置 **EDAS 应用发布** 任务：
 
@@ -407,8 +420,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     | **构建产物** | 选 `app-jar` |
     | **JVM 参数 / 启动参数** | **留空**（用 EDAS 应用上已有的配置） |
 
-    > 📷 截图占位：EDAS 应用发布任务配置面板
-    > 🔗 官方截图参考：[EDAS 应用发布任务配置](https://help.aliyun.com/zh/yunxiao/use-cases/build-and-deploy-edas-kubernetes-java-applications)
+    ![云效 EDAS 发布任务配置面板](img/yunxiao-edas-task-config.png)
+    > △ 官方文档截图：EDAS 发布任务的配置抽屉（截图为 K8s 集群版任务，ECS 集群版字段同类：服务连接、地域、应用、部署包）
+    > 🔗 官方文档：[EDAS 应用发布任务配置](https://help.aliyun.com/zh/yunxiao/use-cases/build-and-deploy-edas-kubernetes-java-applications)
 
 > **常见误区**：JVM 参数填进流水线后会 **覆盖** EDAS 应用的现有配置。留空让 EDAS 沿用 06 章 Part 6.4 填好的 `-DENV=prod -DDB_HOST=...`——这是配置管理的"单一来源"原则：**应用配置只在 EDAS 控制台维护，流水线只管推 jar**。
 
@@ -440,8 +454,8 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 62. 同 Part 5.2 的方式新建 `coffee-userorder-pipeline-C`，构建部分共用
 63. **删掉"主机部署"任务**，原位置 **+ 添加任务** → 搜 **"SAE"** → 选 **"Serverless(SAE)应用发布"**
 
-    > 📷 截图占位：搜索 SAE 的任务列表结果
-    > 🔗 官方截图参考：[使用云效流水线构建 Java 应用并部署到 SAE](https://help.aliyun.com/zh/yunxiao/use-cases/java-application-build-and-deploy-sae)
+    > 📷 添加任务抽屉和 Part 5 第 54 步那张截图是同一个界面（见上文配图），搜索框输 `SAE` 即可
+    > 🔗 官方文档：[使用云效流水线构建 Java 应用并部署到 SAE](https://help.aliyun.com/zh/yunxiao/use-cases/java-application-build-and-deploy-sae)
 
 64. 配置 **Serverless(SAE)应用发布** 任务：
 
@@ -486,8 +500,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 
 67. **新建流水线** → 模板选 **"Node.js · 测试、构建、部署到阿里云 ECS / 自有主机"**
 
-    > 📷 截图占位：Node.js 模板选择
-    > 🔗 官方截图参考：[Node.js 应用构建部署](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-node-js-application-to-a-host)
+    ![云效新建流水线模板选择弹窗](img/yunxiao-template-select.png)
+    > △ 官方文档截图：和后端建流水线是同一个模板弹窗，左侧语言分类切到 **Node.js** 再选主机部署模板
+    > 🔗 官方文档：[Node.js 应用构建部署](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-node-js-application-to-a-host)
 
 68. 名字 `coffee-front-pipeline`
 69. **流水线源** 同后端配
@@ -522,8 +537,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
       nginx -t && nginx -s reload
       ```
 
-    > 📷 截图占位：前端主机部署配置
-    > 🔗 官方截图参考：[主机部署任务配置](https://help.aliyun.com/zh/yunxiao/user-guide/host-deployment-1)
+    ![云效主机部署任务配置（制品、主机组、部署脚本）](img/yunxiao-host-deploy-detail.png)
+    > △ 官方文档截图：主机部署任务配置面板——制品下拉、主机组、下载路径、部署脚本从上到下依次填
+    > 🔗 官方文档：[主机部署任务配置](https://help.aliyun.com/zh/yunxiao/user-guide/host-deployment-1)
 
     > **ECS-3 用宝塔镜像的同学注意**：宝塔的网站根目录不是 `/usr/share/nginx/html`，而是 **`/www/wwwroot/<你的站点名>`**（在宝塔「网站」列表里能看到该站点的根目录）。把上面下载路径和部署脚本里的 `/usr/share/nginx/html` 全部换成你的站点根目录即可；`nginx -s reload` 宝塔环境同样可用。手工部署（11 章 Part 8.3 方式 A）时本来就在面板里点鼠标，不涉及这条路径。
 
