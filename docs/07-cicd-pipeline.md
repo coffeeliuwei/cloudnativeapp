@@ -35,7 +35,7 @@
 |----------------|------------------|---------|
 | 本地 `mvn deploy` 把 3 个库推到云效仓库 | **流水线"Java 构建上传"任务里跑 mvn deploy** | Part 3.3 |
 | 本地 `mvn package` 打 3 个微服务 jar | **"Java 构建上传"任务自动跑** | Part 3.4 |
-| 浏览器在会话管理里 📤 上传 jar | **"主机部署"任务自动 scp** | Part 4 |
+| 浏览器在 ECS 实例详情页"上传/下载文件"传 jar | **"主机部署"任务自动 scp** | Part 4 |
 | 终端粘 `cd ~/coffee && ./manage.sh restart` | **"主机部署"的"部署脚本"框自动跑** | Part 4 |
 | EDAS 控制台点 "部署应用" 上传新 jar | **"EDAS 应用发布"任务自动调 API** | Part 5 |
 | SAE 控制台点 "部署应用" 上传新 jar | **"Serverless(SAE)应用发布"任务自动调 API** | Part 6 |
@@ -299,7 +299,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 
 ## Part 4 路径 A 流水线 — 后端构建 + 主机部署到 ECS
 
-> **对照 06 章 Part 5**：第 11 章你"会话管理 📤 上传 jar → 终端粘 `./manage.sh restart`"那两步，本节让流水线自动做。
+> **对照 06 章 Part 5**：第 11 章你"实例详情页上传 jar → 会话管理终端粘 `./manage.sh restart`"那两步，本节让流水线自动做。
 
 ### 4.1 在"全局设置 → 主机组管理"建主机组
 
@@ -660,7 +660,7 @@ RAM 子账号缺 `AliyunEDASFullAccess`。回 Part 2.4 第 14 步补授权。
 
 **Q：发布成功但 EDAS 应用状态卡在"部署中"**
 
-EDAS Agent 拉取 jar 太慢或失败。进 EDAS 应用 → 变更记录 → 看实际错误。常见原因：ECS 出方向 8442 / 8443 / 8883 没开（06 章 Part 6.1）。
+EDAS Agent 拉取 jar 太慢或失败。进 EDAS 应用 → 变更记录 → 看实际错误。常见原因：安全组出方向被收紧、或 EDAS 自动添加的安全组规则被误删（06 章 Part 6.1）。
 
 ### 路径 C 流水线问题
 
