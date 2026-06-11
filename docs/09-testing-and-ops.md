@@ -71,8 +71,8 @@
 
 1. **可视化无代码编排**：拖拽配置 API + 参数 + 断言
 2. **Chrome 插件录制**：浏览器开 PTS 插件操作一遍，自动生成脚本
-3. **脚本导入**：导入 Postman 集合等
-4. **JMeter 脚本上传**：把 .jmx 文件直接传上来
+3. **脚本导入**：把已有压测脚本导入 PTS 的编排界面
+4. **JMeter 原生引擎**：把 .jmx 文件直接传上来，用原生 JMeter 引擎压测
 
 > **本课程推荐路径**：先用 **方式 4（JMeter）** —— 大多数学校 / 培训会教 JMeter，跑通后再去玩 PTS 原生编排。
 
@@ -176,6 +176,9 @@ EMAS = Enterprise Mobile Application Studio，阿里云的"移动一站式研发
 - 检测磁盘满 → **自动通知 + 清理临时文件**
 
 这就是把 **"7×24 人盯监控"** 替换成 **"机器盯机器，人盯异常"** ——所谓"自动化运维"的本质。
+
+![云监控产品架构图](img/cloudmonitor-architecture.png)
+> △ 官方架构图：左边采集指标/事件，中间指标库+报警系统，右边就是上面说的"自动动作"——通知到人（短信/钉钉/电话）或触发云产品（弹性伸缩、函数计算、日志服务）
 
 ---
 
@@ -322,8 +325,9 @@ POST /order/create  耗时 2400 ms
 - 所有动作 ActionTrail + SLS 留痕
 - Root 只在紧急情况下用（且每次用都被记录）
 
-   > 📷 截图占位：ActionTrail 投递到 SLS 配置
-   > 🔗 官方截图参考：[ActionTrail 产品概述](https://help.aliyun.com/zh/actiontrail/product-overview/what-is-actiontrail)
+   ![ActionTrail 多地域操作事件统一投递架构](img/actiontrail-architecture.png)
+   > △ 官方架构图：所有地域的操作事件由 ActionTrail 统一收集，按"跟踪"投递到 OSS / SLS / MNS——我们用的就是投递 SLS 这条
+   > 🔗 官方文档：[ActionTrail 产品概述](https://help.aliyun.com/zh/actiontrail/product-overview/what-is-actiontrail)
 
 ### 5.4 给本项目设 3 条 SLS 告警
 

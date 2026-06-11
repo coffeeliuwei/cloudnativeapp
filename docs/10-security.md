@@ -171,8 +171,9 @@
 3. **按 CVSS 评分排优先级修**：紧急 > 高危 > 中危
 4. 修完再扫一次
 
-   > 📷 截图占位：云安全中心漏洞扫描结果页
-   > 🔗 官方截图参考：[云安全中心产品概述](https://help.aliyun.com/zh/security-center/product-overview/what-is-security-center)
+   ![云安全中心漏洞列表页](img/sas-vuln-list.png)
+   > △ 官方文档截图：扫描结果按 Linux 软件漏洞 / Windows 系统漏洞 / Web-CMS / 应用 / 应急漏洞分页签展示，每条带 CVE 编号和处理入口
+   > 🔗 官方文档：[查看和处理漏洞](https://help.aliyun.com/zh/security-center/user-guide/view-and-handle-vulnerabilities)
 
 ---
 

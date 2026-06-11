@@ -126,8 +126,9 @@
 
 5. 阿里云控制台搜 **云解析 DNS** → 进 **解析设置** → 找到你的域名 → **添加记录**
 
-   > 📷 截图占位：云解析 DNS 添加记录界面
-   > 🔗 官方截图参考：[添加解析记录](https://help.aliyun.com/zh/dns/add-a-cname-record)
+   ![云解析 DNS 解析设置页面（解析记录列表）](img/dns-resolve-settings.png)
+   > △ 官方文档截图：域名的"解析设置"页——已添加的 A 记录长这样（主机记录 / 记录类型 / 记录值），右上角"添加记录"
+   > 🔗 官方文档：[添加解析记录](https://help.aliyun.com/zh/dns/add-a-cname-record)
 
 6. **站点域名（三条路径都这样做）** 用 **A 记录** 指向 ECS-3：
 
