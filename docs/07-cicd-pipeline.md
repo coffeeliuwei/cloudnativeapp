@@ -160,8 +160,9 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 
 6. **全局设置 → 服务连接 → 新建服务连接**
 
-   > 📷 截图占位：新建服务连接弹窗
-   > 🔗 官方截图参考：[新建服务连接 - 阿里云类型](https://help.aliyun.com/zh/yunxiao/user-guide/service-connection)
+   ![云效全局设置-服务连接管理列表](img/yunxiao-service-connection.png)
+   > △ 官方文档截图：全局设置 → 服务连接管理，右上角"新建服务连接"
+   > 🔗 官方文档：[服务连接](https://help.aliyun.com/zh/yunxiao/user-guide/service-connection)
 
 7. 在弹窗里选 **阿里云**（类型）→ 下一步
 8. 进 [RAM 控制台](https://ram.console.aliyun.com/users) 用 **子账号** 生成一对 AccessKey ID / Secret（**绝对不要用主账号**），把 AK/SK 填回云效弹窗
@@ -307,8 +308,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 
 32. 进 **全局设置 → 主机组管理** → **新建主机组**
 
-    > 📷 截图占位：主机组管理列表 + 新建按钮
-    > 🔗 官方截图参考：[新建主机组](https://help.aliyun.com/zh/yunxiao/user-guide/host-group-management)
+    ![云效新建主机组弹窗](img/yunxiao-create-host-group.png)
+    > △ 官方文档截图：全局设置 → 主机组管理 → 新建主机组
+    > 🔗 官方文档：[主机组管理](https://help.aliyun.com/zh/yunxiao/user-guide/host-group-management)
 
 33. 填基础信息：
     - **主机组名称**：`coffee-prod-ecs`
@@ -316,8 +318,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
 
 34. 进入主机列表 → **添加主机** → 用 **阿里云 ECS** 子菜单 → 勾选你的 ECS-1 / ECS-2 / ECS-3 → 云效会通过 **阿里云云助手**（不是 SSH）远程在 ECS 上装 Runner
 
-    > 📷 截图占位：添加主机弹窗 / 选 ECS 实例
-    > 🔗 官方截图参考：[主机组管理 - 添加主机](https://help.aliyun.com/zh/yunxiao/user-guide/host-group-management)
+    ![云效主机组内的主机列表与 Runner 状态](img/yunxiao-host-group-machines.png)
+    > △ 官方文档截图：主机组详情——每台主机一行，右侧显示 Runner 安装/在线状态
+    > 🔗 官方文档：[主机组管理 - 添加主机](https://help.aliyun.com/zh/yunxiao/user-guide/host-group-management)
 
 35. 等约 1-2 分钟，3 台 ECS 状态变 **"在线"**
 
@@ -340,8 +343,9 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     | **执行用户** | `root` |
     | **部署脚本** | 见下 |
 
-    > 📷 截图占位：主机部署任务配置面板
-    > 🔗 官方截图参考：[接入主机并配置流水线主机部署任务](https://help.aliyun.com/zh/yunxiao/user-guide/host-deployment-1)
+    ![云效"主机部署"任务配置面板](img/yunxiao-host-deploy-task.png)
+    > △ 官方文档截图：流水线编辑页右侧的"主机部署"任务配置（主机组、制品、部署脚本都在这里填）
+    > 🔗 官方文档：[接入主机并配置流水线主机部署任务](https://help.aliyun.com/zh/yunxiao/user-guide/host-deployment-1)
 
 39. **部署脚本** 框里粘：
     ```bash
