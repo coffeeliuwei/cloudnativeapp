@@ -383,7 +383,7 @@ QuickBI 把"报表"分成 3 类，**各有用法**：
 
 3. **测试连接 → 确定**
 
-> **RDS 白名单坑**：QuickBI 用的 IP 段不在你 ECS / SAE 的网段里——**得把 QuickBI 的公网 IP 段加进 RDS 白名单**，控制台会给你列出。这和 06 章 Part 7.4 那个"SAE VSwitch 网段加白名单"的坑是一类。
+> **RDS 白名单坑**：QuickBI 用的 IP 段不在你 ECS / SAE 的网段里——**得把 QuickBI 的公网 IP 段加进 RDS 白名单**，控制台会给你列出。这和 06 章 Part 7.4 那个"SAE 虚拟交换机（VSwitch）网段加白名单"的坑是一类。
 
 ### 7.2 第 2 步：建数据集
 
