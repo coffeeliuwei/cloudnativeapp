@@ -541,7 +541,7 @@ mvn -B clean deploy -DskipTests -pl coffee-common,coffee-userorder/api,coffee-ex
     > △ 官方文档截图：主机部署任务配置面板——制品下拉、主机组、下载路径、部署脚本从上到下依次填
     > 🔗 官方文档：[主机部署任务配置](https://help.aliyun.com/zh/yunxiao/user-guide/host-deployment-1)
 
-    > **ECS-3 用宝塔镜像的同学注意**：宝塔的网站根目录不是 `/usr/share/nginx/html`，而是 **`/www/wwwroot/<你的站点名>`**（在宝塔「网站」列表里能看到该站点的根目录）。把上面下载路径和部署脚本里的 `/usr/share/nginx/html` 全部换成你的站点根目录即可；`nginx -s reload` 宝塔环境同样可用。手工部署（11 章 Part 8.3 方式 A）时本来就在面板里点鼠标，不涉及这条路径。
+    > **ECS-3 用宝塔镜像的同学注意**：宝塔的网站根目录不是 `/usr/share/nginx/html`，而是 **`/www/wwwroot/<你的站点名>`**（在宝塔「网站」列表里能看到该站点的根目录）。把上面下载路径和部署脚本里的 `/usr/share/nginx/html` 全部换成你的站点根目录即可；`nginx -s reload` 宝塔环境同样可用。手工部署（11 章 Part 8.3 方式①宝塔）时本来就在面板里点鼠标，不涉及这条路径。
 
 74. 保存运行 → 浏览器访问 `http://<ECS-3 公网 IP>/` → 看到新版本前端
 
@@ -700,7 +700,7 @@ SAE 应用新部署后首次访问的冷启动正常现象（现拉镜像、启 
 
 **Q：前端构建后 `nginx -s reload` 报 `nginx not found`**
 
-ECS-3 没装 Nginx 或 `nginx` 不在 root 的 PATH 里。**宝塔镜像**本来自带 Nginx，多半是 `nginx` 命令不在 PATH——用宝塔自己的 reload（面板里重载，或绝对路径 `/www/server/nginx/sbin/nginx -s reload`）；**裸镜像**则回 06 章 Part 8.4（方式 B）确认已 `apt/dnf install nginx`，或部署脚本里写绝对路径 `/usr/sbin/nginx -s reload`。
+ECS-3 没装 Nginx 或 `nginx` 不在 root 的 PATH 里。**宝塔镜像**本来自带 Nginx，多半是 `nginx` 命令不在 PATH——用宝塔自己的 reload（面板里重载，或绝对路径 `/www/server/nginx/sbin/nginx -s reload`）；**裸镜像**则回 06 章 Part 8.4（方式②命令行）确认已 `apt/dnf install nginx`，或部署脚本里写绝对路径 `/usr/sbin/nginx -s reload`。
 
 ---
 
