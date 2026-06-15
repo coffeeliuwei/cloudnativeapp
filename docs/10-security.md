@@ -157,7 +157,8 @@
 - 先知模式按结果付费，**没漏洞不花钱**
 - 白帽人数比你内部团队多 10 倍以上
 
-> 📷 截图占位：先知平台首页
+![阿里云安全先知众测平台首页](img/xianzhi-home.png)
+> △ 阿里云安全先知众测平台（[xianzhi.aliyun.com](https://xianzhi.aliyun.com)）：顶部"提交漏洞/企业入驻/先知社区/漏洞平台"，下方"热门项目"列出企业发布的众测项目——你发招募贴、白帽来打、按结果发奖金。
 > 🔗 官方文档：[阿里云先知（安全众测）](https://help.aliyun.com/zh/security-vulnerability-management)
 
 ### 3.3 给本项目做漏洞扫描（最小操作）
@@ -208,8 +209,9 @@
    ```
 4. 等 1 分钟，控制台显示"在线"
 
-   > 📷 截图占位：云安全中心资产中心页面
-   > 🔗 官方截图参考：[云安全中心产品概述](https://help.aliyun.com/zh/security-center/product-overview/what-is-security-center)
+   ![云安全中心产品页：预防/检测/响应/治理一体的 CNAPP](img/sas-product.png)
+   > △ 云安全中心（[aliyun.com/product/security-center](https://www.aliyun.com/product/security-center)）：集预防、检测、响应、治理与可见性于一体的云原生应用保护平台（CNAPP）——稳定性、统一安全管理、安全闭环能力、全面攻击检测，对应本节的资产梳理/风险发现/实时防护等能力；点"管理控制台"进资产中心。
+   > 🔗 官方文档：[云安全中心产品概述](https://help.aliyun.com/zh/security-center/product-overview/what-is-security-center)
 
 ### 4.3 装上 Agent 后能看到的"魔法"
 
@@ -270,7 +272,8 @@ WAF 防的是 **应用层攻击**：
 3. 回云解析 DNS → 把 `coffee` 主机记录的解析值改成这个 CNAME
 4. **流量瞬间过 WAF**，恶意请求被拦截
 
-   > 📷 截图占位：WAF 控制台 + 接入向导
+   ![Web 应用防火墙控制台欢迎页与防护前后对比](img/waf-console-home.png)
+   > △ Web 应用防火墙控制台（[yundun.console.aliyun.com](https://yundun.console.aliyun.com/?p=waf)）：一站式应用安全解决方案，拦截 SQL 注入/XSS/CC 等攻击，支持混合云/多云 WAF；图中 before/after 即接入 WAF 前后的防护效果。
    > 🔗 官方文档：[WAF 产品概述](https://www.aliyun.com/product/waf)
 
 ### 5.3 云防火墙
@@ -382,7 +385,8 @@ DSC 干 3 件事：
 3. 订单表 `phone` / `address` 字段 → **KMS 加密后存**（写一个 Encryptor 工具类）
 4. 备份策略：RDS 自动备份 + **跨地域备份**（异地容灾）
 
-   > 📷 截图占位：KMS 控制台 / RDS 加密配置
+   ![KMS 密钥管理服务控制台](img/kms-console-home.png)
+   > △ KMS 密钥管理服务控制台（[kms.console.aliyun.com](https://kms.console.aliyun.com)）：左侧"专属 KMS / 应用管理 / 迁移工具"，应用调 KMS 加解密敏感字段，密钥由硬件加密机（HSM）保管、永不出机。
    > 🔗 官方文档：[阿里云 KMS](https://www.aliyun.com/product/kms)
 
 ---
@@ -428,8 +432,9 @@ DSC 干 3 件事：
 
 历史上"删库跑路"的事故无一例外都是 **运维独自掌握 root 密码 + 没人在看**——堡垒机把这两件事都堵死。
 
-   > 📷 截图占位：堡垒机命令录像回放界面
-   > 🔗 官方文档：[阿里云堡垒机](https://cn.aliyun.com/product/bastionhost)
+   ![运维安全中心（堡垒机）产品页](img/bastionhost-product.png)
+   > △ 运维安全中心 / 堡垒机（[aliyun.com/product/bastionhost](https://www.aliyun.com/product/bastionhost)）：云上统一安全运维通道，集中管理资产权限、全程监控操作行为、实时还原运维场景——身份可鉴别、权限可管控、风险可阻断、操作可审计（命令录像回放就在控制台的会话审计里）。
+   > 🔗 官方文档：[阿里云堡垒机](https://www.aliyun.com/product/bastionhost)
 
 ### 8.4 给本项目接堡垒机（思路）
 
