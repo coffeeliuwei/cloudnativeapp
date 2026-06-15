@@ -151,8 +151,9 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 1. 登录 [云效 DevOps](https://devops.aliyun.com) → 左上角应用切换器进 **代码管理 Codeup**
 2. **新建代码库** → 名称 `cloudnativeapp` → 创建
 
-   > 📷 截图占位：Codeup 新建代码库页面
-   > 🔗 官方截图参考：[创建代码库 - Codeup](https://help.aliyun.com/zh/yunxiao/user-guide/create-a-code-base)
+   ![云效 Codeup 代码库列表，右上角"新建代码库"按钮](img/yunxiao-codeup-repos.png)
+   > △ 云效 Codeup（[codeup.aliyun.com](https://codeup.aliyun.com)）代码管理页：左侧"代码库/代码组"，右上角 **新建代码库** / **导入代码库**。本课程的 coffee-app / coffee-userorder / coffee-expresstrack / coffee-common 仓库都在这里。
+   > 🔗 官方文档：[创建代码库 - Codeup](https://help.aliyun.com/zh/yunxiao/user-guide/create-a-code-base)
 
 3. 终端进项目根目录，把云效仓库当作另一个远程推上去：
    ```bash
@@ -164,8 +165,9 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 
 4. 回流水线 Flow 首页 → **左侧导航最下方** 有 **⚙ 全局设置**
 
-   > 📷 截图占位：左侧导航底部 ⚙ 全局设置 位置（参考你刚发的那张截图最下方）
-   > 🔗 官方截图参考：[服务连接 - 查看入口位置](https://help.aliyun.com/zh/yunxiao/user-guide/service-connection)
+   ![云效 Flow 首页，左侧导航最下方的"全局设置"入口](img/yunxiao-flow-home.png)
+   > △ 云效 Flow（[flow.aliyun.com](https://flow.aliyun.com)）首页：**左侧导航最下方**就是 **⚙ 全局设置**（服务连接、主机组管理都在里面）；右上角蓝色 **新建流水线** 按钮见 3.1 节。
+   > 🔗 官方文档：[服务连接 - 查看入口位置](https://help.aliyun.com/zh/yunxiao/user-guide/service-connection)
 
 5. 进去后右侧会展开多个子项，本章会用到：
    - **服务连接**（加密凭据）
@@ -213,8 +215,9 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 
 16. 流水线 Flow 首页 → **右上角蓝色"新建流水线"按钮**
 
-    > 📷 截图占位：右上角"新建流水线"按钮（参考你刚发的那张截图右上角）
-    > 🔗 官方截图参考：[创建流水线 - 入口与模板](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
+    ![云效 Flow 首页右上角的"新建流水线"按钮](img/yunxiao-flow-home.png)
+    > △ 云效 Flow 首页右上角的蓝色 **新建流水线** 按钮（同一页左下角是 2.2 节的"全局设置"）。中间区域无流水线时会显示"创建流水线"引导。
+    > 🔗 官方文档：[创建流水线 - 入口与模板](https://help.aliyun.com/zh/yunxiao/user-guide/build-and-deploy-a-java-application-to-an-ecs-host)
 
 17. 弹出 **选择流水线模板** 窗口 → 左侧分类点 **Java** → 选 **"Java · 测试、构建、部署到阿里云 ECS / 自有主机"**
 
