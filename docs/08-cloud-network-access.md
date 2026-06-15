@@ -178,8 +178,9 @@
 1. 阿里云控制台搜 **域名** → 进 **域名服务** → 顶部输入框查询想要的域名 → 看不同后缀的 **首年价/续费价**（对照 2.2.1 ②）→ 加入清单 → 结算（购买年限按 2.2.1 ① 选，最短 1 年）
 2. 完成 **实名认证**（控制台自动引导上传身份证或营业执照，对照 2.2.1 ③）——**实名通过后域名才能解析**
 
-   > 📷 截图占位：域名购买与实名认证
-   > 🔗 官方截图参考：[阿里云域名注册流程](https://help.aliyun.com/zh/domains/domain-registration)
+   ![阿里云万网域名查询结果页：各后缀的首年价与续费价](img/dns-domain-buy.png)
+   > △ 阿里云万网域名查询页（[wanwang.aliyun.com/domain](https://wanwang.aliyun.com/domain/)）实测截图：查询 `coffeetrack2026`，可见 `.xyz` **首年 ¥7 / 续费 ¥109/年**（典型"首年便宜续费贵"）、`.com` **¥85 / 续费 ¥95/年**、`.cn` **¥38 / 续费 ¥42/年**——正好对照 2.2.1 ② 的价格提醒。点 **立即注册** 加入购物车后结算，再按引导做实名认证即可。
+   > 🔗 官方入口：[阿里云万网 - 域名注册/查询](https://wanwang.aliyun.com/domain/) ｜ [域名注册操作文档](https://help.aliyun.com/zh/domains/user-guide/registration-process)
 
 #### 第 2 步：备案（中国大陆服务器必做）
 
