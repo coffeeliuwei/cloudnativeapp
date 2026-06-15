@@ -124,11 +124,13 @@ mvn -version
 
 ---
 
-### 4. 安装 Node.js 16+
+### 4. 安装 Node.js（选 LTS 版，推荐 18 或 20）
 
 **下载**
 
-打开 [https://nodejs.org](https://nodejs.org)，下载 **LTS 版本**（如 `18.x.x LTS`）的 Windows Installer (`.msi`)。
+打开 [https://nodejs.org](https://nodejs.org)，下载 **LTS 版本**（推荐 `18.x` 或 `20.x` LTS）的 Windows Installer (`.msi`)。
+
+> ⚠️ **不要下载首页那个"最新 / Current"版本（如 Node 24）**：它自带的 npm 11 在本项目上会触发 `npm error Exit handler never called!`，导致依赖装不全、`npm run dev` 报 `'vue-cli-service' 不是内部或外部命令`（详见文末 **错误 13**）。认准带 **LTS** 字样的版本即可。
 
 **安装**
 
@@ -137,8 +139,8 @@ mvn -version
 **验证**
 
 ```cmd
-node -v    # 应显示 v16.x 或更高
-npm -v     # 应显示 8.x 或更高
+node -v    # 推荐 v18.x 或 v20.x（LTS）；别用 v24 这种最新 Current 版
+npm -v     # 用 LTS 自带的 npm（9.x / 10.x）即可，避开 npm 11
 ```
 
 **配置国内镜像（强烈建议）**
