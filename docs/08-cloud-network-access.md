@@ -282,8 +282,9 @@
 2. **用户网关** 填本地路由器的 **固定公网 IP**（**没固定 IP 走不了 IPsec**——这是 IPsec 协议本身的要求，不是阿里云限制）
 3. **IPsec 连接** 配两端的预共享密钥 + 网段路由
 
-   > 📷 截图占位：阿里云 VPN 网关控制台
-   > 🔗 官方截图参考：[什么是 IPsec-VPN](https://help.aliyun.com/zh/vpn/sub-product-ipsec-vpn/product-overview/what-is-ipsec-vpn)
+   ![阿里云 VPN 网关官方文档：什么是 IPsec-VPN（两种绑定模式）](img/vpn-ipsec-overview.png)
+   > △ 阿里云官方文档"什么是 IPsec-VPN"页：IPsec-VPN 在本地网络与阿里云 VPC 之间建立加密隧道，提供"绑定 VPN 网关（连单 VPC）"和"绑定转发路由器（连多 VPC）"两种模式。
+   > 🔗 官方文档：[什么是 IPsec-VPN](https://help.aliyun.com/zh/vpn/sub-product-ipsec-vpn/product-overview/what-is-ipsec-vpn)
 
 > **不建议用 VPN 网关做"VPC 间互连"**——VPC 间互连有 **更好的方案**（Part 6 的云企业网 CEN），便宜、快、运维简单。VPN 留给"本地 IDC ↔ 云"或"个人电脑 ↔ 云"这两个场景。
 
@@ -335,8 +336,9 @@ SAG 是阿里云的 **云原生 SD-WAN 方案**。所谓 SD-WAN 就是"用软件
 | 价格 | 按月固定（几百 ~ 千） | 按盒子 / APP 数量 + 流量 |
 | 适合 | 单点对云 | 分支多、终端杂、异构云 |
 
-   > 📷 截图占位：SAG 控制台 / 硬件设备
-   > 🔗 官方截图参考：[智能接入网关产品概述](https://help.aliyun.com/zh/smart-access-gateway/product-overview/what-is-smart-access-gateway)
+   ![阿里云智能接入网关官方文档：三种产品形态（硬件 CPE / vCPE / App）](img/sag-overview.png)
+   > △ 阿里云官方文档"什么是智能接入网关"页：SAG 是软件定义广域网 SD-WAN 方案，提供硬件 CPE（SAG-100WM/SAG-1000）、镜像 vCPE、移动 App 三种接入形态。
+   > 🔗 官方文档：[什么是智能接入网关](https://help.aliyun.com/zh/sag/product-overview/what-is-sag)
 
 ---
 
@@ -402,8 +404,9 @@ SAG 是阿里云的 **云原生 SD-WAN 方案**。所谓 SD-WAN 就是"用软件
 3. **配置 VBR** — 阿里云控制台 → 高速通道 → 创建边界路由器，绑定专线
 4. **加入 CEN** — 把 VBR 和你的 VPC 都加进同一个 CEN 实例，开通互通
 
-   > 📷 截图占位：高速通道控制台、VBR 创建界面
-   > 🔗 官方截图参考：[什么是高速通道](https://help.aliyun.com/zh/express-connect/product-overview/what-is-express-connect)
+   ![阿里云高速通道官方文档：物理专线 + VBR + 转发路由器 TR 网络拓扑](img/express-connect-vbr.png)
+   > △ 阿里云官方文档"什么是高速通道"页的网络拓扑：本地数据中心 → 物理专线 → 边界路由器 VBR → 专线网关 ECR → 转发路由器 TR → 专有网络 VPC，全程不经公网。
+   > 🔗 官方文档：[什么是高速通道](https://help.aliyun.com/zh/express-connect/product-overview/what-is-express-connect)
 
 ### 5.4 适合谁、不适合谁
 
@@ -522,8 +525,9 @@ CEN 的计费有两块：
 
 **同地域内网络实例互通免费**，**跨地域带宽是大头**。
 
-   > 📷 截图占位：CEN 控制台 / TR 拓扑视图
-   > 🔗 官方截图参考：[云企业网功能特性](https://help.aliyun.com/zh/cen/product-overview/functions-and-features) ｜ [管理转发路由器实例](https://help.aliyun.com/zh/cen/user-guide/transit-routers)
+   ![阿里云云企业网官方文档：多地域转发路由器 TR 互联多 VPC 拓扑](img/cen-topology.png)
+   > △ 阿里云官方文档"什么是云企业网"页的组成部分拓扑：多个 VPC 通过各地域的转发路由器 TR（华南/华东/新加坡）经云企业网骨干跨地域互通。
+   > 🔗 官方文档：[什么是云企业网](https://help.aliyun.com/zh/cen/product-overview/what-is-cen) ｜ [管理转发路由器实例](https://help.aliyun.com/zh/cen/user-guide/transit-routers)
 
 ### 6.7 一个典型企业网最终长什么样
 
