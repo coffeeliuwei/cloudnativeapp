@@ -96,8 +96,9 @@
 4. 启动 → 看实时 RPS / 平均延迟 / 错误率
 5. 找到 **错误率开始飙升的那个并发点**——那就是你这套架构当前的"容量上限"
 
-   > 📷 截图占位：PTS 控制台 + 压测实时大盘
-   > 🔗 官方截图参考：[PTS 产品概述](https://help.aliyun.com/zh/pts/product-overview/what-is-pts)
+   ![PTS 性能测试控制台首次进入的服务介绍](img/pts-console-home.png)
+   > △ PTS 性能测试控制台（[ptsnext.console.aliyun.com](https://ptsnext.console.aliyun.com)）首次进入：30 天试用 + 5000 VUM 免费额度，点"立即试用"后即可创建压测场景、看实时大盘。
+   > 🔗 官方文档：[PTS 产品概述](https://help.aliyun.com/zh/pts/product-overview/what-is-pts)
 
 ### 1.4 压测发现问题后怎么办
 
@@ -126,8 +127,9 @@ EMAS = Enterprise Mobile Application Studio，阿里云的"移动一站式研发
 | **移动测试** | 真机云测，自动化兼容性测试 | TestIn |
 | **移动热修复** | 不发版直接修 Bug | Sophix（前身） |
 
-   > 📷 截图占位：EMAS 控制台首页
-   > 🔗 官方截图参考：[EMAS 产品页](https://www.aliyun.com/product/emas)
+   ![EMAS 移动研发平台开通页与免费额度](img/emas-console-home.png)
+   > △ EMAS 移动研发平台开通页：开发者版免费套餐含 EMAS Serverless、移动推送、移动监控、HTTPDNS 等子服务的免费额度——正好对应本节列的几个子服务。
+   > 🔗 官方文档：[EMAS 产品页](https://www.aliyun.com/product/emas)
 
 ### 2.2 和本课程项目的关系
 
@@ -174,8 +176,9 @@ EMAS = Enterprise Mobile Application Studio，阿里云的"移动一站式研发
 3. **规则** 选指标 + 阈值
 4. **通知方式** 选钉钉机器人 / 短信 / 电话
 
-   > 📷 截图占位：云监控创建报警规则界面
-   > 🔗 官方截图参考：[云监控产品概述](https://help.aliyun.com/zh/cms/product-overview/what-is-cloudmonitor)
+   ![云监控控制台概览，左侧导航含"报警规则"入口](img/cloudmonitor-console-home.png)
+   > △ 云监控控制台（[cloudmonitornext.console.aliyun.com](https://cloudmonitornext.console.aliyun.com)）概览：正在报警/系统事件/报警历史/资源配额一目了然；**左侧导航的"报警规则"** 就是创建本节那 3 条告警的入口。
+   > 🔗 官方文档：[云监控产品概述](https://help.aliyun.com/zh/cms/product-overview/what-is-cloudmonitor)
 
 ### 3.3 "自动化运维"的真正含义
 
@@ -228,8 +231,9 @@ ARMS = **应用实时监控服务**，阿里云的 **APM（应用性能管理）
 2. 复制控制台给的 **启动参数**（一串 `-javaagent:/path/to/arms-agent.jar -Darms.licenseKey=xxx -Darms.appName=coffee-userorder`）
 3. 把这段加进你 `manage.sh` 的 `JAVA_OPTS`，重启服务 → 1 分钟后 ARMS 控制台就看到应用了
 
-   > 📷 截图占位：ARMS 应用接入指引页 + 应用调用链视图
-   > 🔗 官方截图参考：[ARMS 产品概述](https://help.aliyun.com/zh/arms/product-overview/what-is-arms)
+   ![ARMS 控制台概览与"接入中心"](img/arms-console-home.png)
+   > △ ARMS 应用实时监控控制台（[arms.console.aliyun.com](https://arms.console.aliyun.com)）概览：中间"接入中心"按基础设施/服务端应用/前端应用等分类提供接入入口，左侧"应用监控"进去后即可看调用链。
+   > 🔗 官方文档：[ARMS 产品概述](https://help.aliyun.com/zh/arms/product-overview/what-is-arms)
 
 ### 4.4 Agent 装上后能看到的"魔法"
 
@@ -300,8 +304,9 @@ POST /order/create  耗时 2400 ms
 
 **从此查日志再也不用 SSH** —— 一个搜索框搞定。
 
-   > 📷 截图占位：SLS 查询页面（含搜索栏 + 日志列表 + 图表）
-   > 🔗 官方截图参考：[SLS 产品概述](https://help.aliyun.com/zh/sls/product-overview/what-is-log-service)
+   ![SLS 日志服务控制台：日志应用与 Project 列表](img/sls-console-home.png)
+   > △ SLS 日志服务控制台（[sls.console.aliyun.com](https://sls.console.aliyun.com)）：上方"日志应用"+右侧"接入数据"，下方"Project 列表"（一个 Project 就是一个日志库）。点进 Logstore 即是带搜索栏的查询页。
+   > 🔗 官方文档：[SLS 产品概述](https://help.aliyun.com/zh/sls/product-overview/what-is-log-service)
 
 ### 5.3 SLS + ActionTrail = "废掉 Root 账号"
 
@@ -400,8 +405,9 @@ QuickBI 把"报表"分成 3 类，**各有用法**：
 1. QuickBI 控制台 → **数据源 → 新建数据源** → 选 **MySQL**
 2. 填 RDS **内网地址 + 账号 + 密码**（用 06 章 Part 3.2 创的那个）
 
-   > 📷 截图占位：QuickBI 新建数据源页
-   > 🔗 官方截图参考：[QuickBI 数据源连接](https://help.aliyun.com/zh/quick-bi/user-guide/connect-to-data-sources)
+   ![Quick BI 专业版入口与仪表板示意](img/quickbi-product.png)
+   > △ Quick BI（[das.base.shuju.aliyun.com](https://das.base.shuju.aliyun.com)）专业版入口：开通/进入后在"数据源 → 新建数据源"里选 MySQL 连本项目 RDS（左侧示意图即拖拽生成的报表仪表板）。
+   > 🔗 官方文档：[QuickBI 数据源连接](https://help.aliyun.com/zh/quick-bi/user-guide/connect-to-data-sources)
 
 3. **测试连接 → 确定**
 
@@ -425,8 +431,9 @@ QuickBI 把"报表"分成 3 类，**各有用法**：
     ![QuickBI 仪表板编辑器三个分区](img/quickbi-dashboard-editor.png)
     > △ 阿里云官方文档截图：编辑器分三块——①右侧选数据集字段，②中间把字段拖到维度/度量，③左侧画布实时出图
 
-   > 📷 截图占位：QuickBI 仪表板编辑器
-   > 🔗 官方截图参考：[QuickBI 智能数据分析可视化](https://help.aliyun.com/zh/quick-bi/product-overview/introduction-to-quick-bi-1)
+   ![Quick BI 专业版入口与仪表板示意](img/quickbi-product.png)
+   > △ Quick BI 专业版：进入工作空间后"新建仪表板"，把维度/度量字段拖到画布即出图（左侧示意图就是拖拽生成的多图表仪表板）。
+   > 🔗 官方文档：[QuickBI 智能数据分析可视化](https://help.aliyun.com/zh/quick-bi/product-overview/introduction-to-quick-bi-1)
 
 11. **分享给业务方**：仪表板有公开链接 + 权限管理，业务方打开链接就能看，不用学 SQL。
 
@@ -478,8 +485,9 @@ QuickBI 把"报表"分成 3 类，**各有用法**：
 3. 数据源连本项目的 RDS（同 Part 7.1）
 4. **预览全屏** → 投到大屏
 
-   > 📷 截图占位：DataV 大屏编辑器 + 成品大屏
-   > 🔗 官方截图参考：[DataV 产品页](https://www.aliyun.com/product/datav)
+   ![DataV 数据可视化版本与功能列表](img/datav-product.png)
+   > △ DataV 数据可视化版本页：列出可视化组件（常规图表、2D/3D 地图、三维城市、交互组件等）——这些就是做"实时下单大屏"用的素材；创建大屏后进编辑器拖组件、连 RDS 数据源即可。
+   > 🔗 官方文档：[DataV 产品页](https://www.aliyun.com/product/datav)
 
 ### 8.4 学生作业建议
 
