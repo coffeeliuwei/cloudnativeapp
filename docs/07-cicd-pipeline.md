@@ -117,7 +117,35 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 - **GitHub**（绑账号后能拉，海外节点偶尔抽风）
 - **Gitee / 自建 GitLab**
 
-> 教学项目建议把 GitHub 仓库 **镜像同步到云效 Codeup**：Codeup 仓库设置里有"代码同步"功能，填 GitHub 地址即可。这样 GitHub 仍是 source of truth，流水线拉代码走云效内网更快更稳。
+#### 流水线源 = 流水线和某个 Git 仓库的"绑定"——push 到哪个源就触发哪条流水线
+
+新手最容易卡在这里：**"流水线源"不是随便填一个地址，而是把这条流水线和你某个具体 Git 仓库绑定起来**。绑定后，触发器会盯着这个仓库的 `main` 分支——**你 `git push` 到哪个仓库，就触发以那个仓库为流水线源的流水线**，push 到别的地方不会触发。
+
+```
+本地仓库
+  ├─ git push codeup main ─► Codeup 仓库 ──触发──► 流水线源 = Codeup 的流水线
+  └─ git push origin main ─► GitHub 仓库 ──触发──► 流水线源 = GitHub 的流水线
+```
+
+本课程主要用下面两条，**二选一即可**：
+
+**路径①·用 Codeup 源（推荐）**
+
+2.1 节已经用 `git remote add codeup ...` 把云效仓库加成一个远程。流水线源选 **Codeup → 仓库 `cloudnativeapp` → 分支 `main` → 勾 Push 触发**（具体在 3.3 节配）。以后只要 `git push codeup main`，流水线就自动开跑。云效拉代码走内网，最快最稳。
+
+**路径②·用 GitHub 源（怎么绑定）**
+
+如果你想直接拿 GitHub 仓库当源、`git push origin main` 就触发，需要先让云效"认识"你的 GitHub 账号：
+
+1. 新建或编辑流水线 → 点最左侧 **流水线源** 卡片 → **源类型** 选 **GitHub**
+2. 首次选 GitHub 会提示**还没有 GitHub 代码源授权** → 点 **去授权 / 添加授权** → 跳转 GitHub 登录页，点 **Authorize** 授权云效访问你的仓库（这一步云效会在 GitHub 仓库上注册一个 **webhook**，push 时由它通知云效）
+3. 授权成功跳回云效 → **代码仓库** 下拉里选到 `<你的 GitHub 用户名>/cloudnativeapp` → **默认分支** 填 `main` → 勾 **Push 触发** → 保存
+4. 以后 `git push origin main`，GitHub 通过 webhook 通知云效，这条流水线自动开跑
+
+   > 📷 截图占位：流水线源选 GitHub 后的"代码源授权"弹窗（去授权 → GitHub 点 Authorize → 选仓库）
+   > 🔗 官方文档：[配置流水线源（含第三方代码源绑定）](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
+
+> **镜像法的坑（别踩）**：也有人把 GitHub 当 source of truth、用 Codeup 仓库设置里的"代码同步"镜像过去。这种做法 **流水线源必须选你实际监听的那一侧**——选 Codeup 就只认 Codeup 收到的提交，而镜像同步有延迟、是否触发还取决于触发配置。教学场景**建议直接二选一（要么全走 Codeup，要么全走 GitHub），别两套混用**，否则会出现"我明明 push 了、流水线却没动"。
 
 ### 1.4 变量 / 服务连接
 
@@ -248,7 +276,7 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 ### 3.3 配置流水线源
 
 19. 点最左侧 **流水线源** 卡片 → 右侧抽屉打开
-20. **源类型** 选 **Codeup**（或 GitHub，跟你 2.1 的选择对应）
+20. **源类型** 选 **Codeup**（或 GitHub，跟你 2.1 的选择对应）。⚠️ **这里选的源，就是你 `git push` 时必须推到的那个仓库**；GitHub 源的账号授权绑定见 **1.3 节「路径②·用 GitHub 源」**
 21. **代码仓库** 下拉选 `cloudnativeapp`
 22. **默认分支** 填 `main`
 23. **触发方式** 勾选 **Push 触发**（先勾，Part 8 再细调）
