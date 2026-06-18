@@ -141,20 +141,18 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 
 如果你想直接拿 GitHub 仓库当源、`git push origin main` 就触发，需要先让云效"认识"你的 GitHub 账号：
 
-1. 新建或编辑流水线 → 点最左侧 **流水线源** 卡片 → **源类型** 选 **GitHub**
+1. 点最左侧 **流水线源** 卡片（或新建流水线进编辑页）→ 在"添加流水线源"面板的 **选择代码源** 里点 **Github**。首次用会提示 **"您暂无可用的 Github 服务连接，请先创建服务连接"** → 点 **添加服务连接**
 
-   > 📷 截图占位：流水线源面板「源类型」下拉展开、选中 GitHub（未授权时这一行会显示"去授权/添加授权"）
+   ![云效流水线源选择代码源：选中 Github 后提示添加服务连接](img/yunxiao-source-github-select.png)
+   > △ 流水线源 → 选择代码源：Codeup、Github 等并列。选中 **Github** 后下方提示"暂无可用的 Github 服务连接" → 点 **添加服务连接**。
    > 🔗 官方文档：[配置流水线源（含第三方代码源绑定）](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
 
-2. 首次选 GitHub 会提示**还没有 GitHub 代码源授权** → 点 **去授权 / 添加授权** → 跳转 GitHub 登录页，点绿色 **Authorize** 授权云效访问你的仓库（这一步云效会在 GitHub 仓库上注册一个 **webhook**，push 时由它通知云效）
+2. 弹出 **新建服务连接**（连接类型已是 GitHub）→ 在 **服务授权/证书** 一行点 **+ 新建** → 浏览器新开标签跳到 GitHub，完成 **登录 + 两步验证**，再点绿色 **Authorize** 授权云效。授权请求的权限里含 `repo` 和 `admin:repo_hook`——后者就是**让云效在你的 GitHub 仓库上注册一个 webhook**，push 时由它通知云效。授权成功自动跳回云效，**服务授权/证书** 变成"你的账号的 Github 授权" → 点 **创建**
 
-   > 📷 截图占位：跳转到 GitHub 的 OAuth 授权页，点绿色 **Authorize** 按钮授权云效
-   > 🔗 官方文档：[配置流水线源（含第三方代码源绑定）](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
+3. 回到流水线源面板 → **命名空间** 选你的 GitHub 账号 → **仓库** 选 `cloudnativeapp` → **默认分支** 选 `main` → 打开 **开启代码源触发**（即"push 自动跑"）→ 点 **添加**
 
-3. 授权成功跳回云效 → **代码仓库** 下拉里选到 `<你的 GitHub 用户名>/cloudnativeapp` → **默认分支** 填 `main` → 勾 **Push 触发** → 保存
-
-   ![云效流水线源配置面板：授权后选 GitHub 仓库、分支、勾 Push 触发](img/yunxiao-pipeline-source.png)
-   > △ 授权成功后回到流水线源面板：**代码仓库** 选 `<你的 GitHub 用户名>/cloudnativeapp`、**默认分支** `main`、勾 **Push 触发**（面板布局与 Codeup 源一致，只是仓库来源换成 GitHub）。
+   ![云效流水线源配置面板：GitHub 授权后选命名空间、仓库 cloudnativeapp、分支 main、开启代码源触发](img/yunxiao-source-github-config.png)
+   > △ GitHub 授权完成后：**命名空间**＝你的 GitHub 账号、**仓库**＝`cloudnativeapp`、**默认分支**＝`main`，打开 **开启代码源触发**。
    > 🔗 官方文档：[配置流水线源](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
 
 4. 以后 `git push origin main`，GitHub 通过 webhook 通知云效，这条流水线自动开跑
