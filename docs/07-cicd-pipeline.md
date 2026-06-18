@@ -133,17 +133,31 @@ coffee-front-pipeline           （前端，A/B/C 三路径共用一条）
 
 2.1 节已经用 `git remote add codeup ...` 把云效仓库加成一个远程。流水线源选 **Codeup → 仓库 `cloudnativeapp` → 分支 `main` → 勾 Push 触发**（具体在 3.3 节配）。以后只要 `git push codeup main`，流水线就自动开跑。云效拉代码走内网，最快最稳。
 
+   ![云效流水线源配置面板：源类型选 Codeup、选仓库与分支](img/yunxiao-pipeline-source.png)
+   > △ 流水线源配置面板：**源类型** 选 Codeup 后，**代码仓库** 下拉选 `cloudnativeapp`、**默认分支** `main`、勾 **Push 触发**。以后 `git push codeup main` 即触发本流水线。
+   > 🔗 官方文档：[配置流水线源](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
+
 **路径②·用 GitHub 源（怎么绑定）**
 
 如果你想直接拿 GitHub 仓库当源、`git push origin main` 就触发，需要先让云效"认识"你的 GitHub 账号：
 
 1. 新建或编辑流水线 → 点最左侧 **流水线源** 卡片 → **源类型** 选 **GitHub**
-2. 首次选 GitHub 会提示**还没有 GitHub 代码源授权** → 点 **去授权 / 添加授权** → 跳转 GitHub 登录页，点 **Authorize** 授权云效访问你的仓库（这一步云效会在 GitHub 仓库上注册一个 **webhook**，push 时由它通知云效）
-3. 授权成功跳回云效 → **代码仓库** 下拉里选到 `<你的 GitHub 用户名>/cloudnativeapp` → **默认分支** 填 `main` → 勾 **Push 触发** → 保存
-4. 以后 `git push origin main`，GitHub 通过 webhook 通知云效，这条流水线自动开跑
 
-   > 📷 截图占位：流水线源选 GitHub 后的"代码源授权"弹窗（去授权 → GitHub 点 Authorize → 选仓库）
+   > 📷 截图占位：流水线源面板「源类型」下拉展开、选中 GitHub（未授权时这一行会显示"去授权/添加授权"）
    > 🔗 官方文档：[配置流水线源（含第三方代码源绑定）](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
+
+2. 首次选 GitHub 会提示**还没有 GitHub 代码源授权** → 点 **去授权 / 添加授权** → 跳转 GitHub 登录页，点绿色 **Authorize** 授权云效访问你的仓库（这一步云效会在 GitHub 仓库上注册一个 **webhook**，push 时由它通知云效）
+
+   > 📷 截图占位：跳转到 GitHub 的 OAuth 授权页，点绿色 **Authorize** 按钮授权云效
+   > 🔗 官方文档：[配置流水线源（含第三方代码源绑定）](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
+
+3. 授权成功跳回云效 → **代码仓库** 下拉里选到 `<你的 GitHub 用户名>/cloudnativeapp` → **默认分支** 填 `main` → 勾 **Push 触发** → 保存
+
+   ![云效流水线源配置面板：授权后选 GitHub 仓库、分支、勾 Push 触发](img/yunxiao-pipeline-source.png)
+   > △ 授权成功后回到流水线源面板：**代码仓库** 选 `<你的 GitHub 用户名>/cloudnativeapp`、**默认分支** `main`、勾 **Push 触发**（面板布局与 Codeup 源一致，只是仓库来源换成 GitHub）。
+   > 🔗 官方文档：[配置流水线源](https://help.aliyun.com/zh/yunxiao/user-guide/configure-pipeline-source)
+
+4. 以后 `git push origin main`，GitHub 通过 webhook 通知云效，这条流水线自动开跑
 
 > **镜像法的坑（别踩）**：也有人把 GitHub 当 source of truth、用 Codeup 仓库设置里的"代码同步"镜像过去。这种做法 **流水线源必须选你实际监听的那一侧**——选 Codeup 就只认 Codeup 收到的提交，而镜像同步有延迟、是否触发还取决于触发配置。教学场景**建议直接二选一（要么全走 Codeup，要么全走 GitHub），别两套混用**，否则会出现"我明明 push 了、流水线却没动"。
 
