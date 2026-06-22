@@ -187,6 +187,10 @@
 3. 阿里云控制台搜 **ICP 备案** → 按引导提交资料
 4. **等约 10 个工作日** 审核通过
 
+   ![阿里云 ICP 备案首页：开始备案入口与"检测域名是否可备案"](img/icp-beian-home.png)
+   > △ 阿里云备案（[beian.aliyun.com](https://beian.aliyun.com)）：左侧"快捷工具"可**检测域名是否可备案**，右侧"您尚无备案信息，请点击开始备案"的 **开始备案** 就是入口；下方有备案流程、备案指引。
+   > 🔗 官方文档：[ICP 备案流程概述](https://help.aliyun.com/zh/icp-filing/user-guide/icp-filing-process)
+
 > 教学环境想跳过备案？把 ECS / SAE 实例的地域选 **香港 / 海外**——海外节点不需要 ICP 备案。但延迟会高一点。
 
 #### 第 3 步：在 DNS 解析里添加记录
@@ -206,6 +210,10 @@
    | 解析线路 | 默认 |
    | 记录值 | ECS-3 的公网 IP |
    | TTL | 10 分钟 |
+
+   ![云解析 DNS 添加记录弹窗：A 记录、主机记录 coffee、记录值填 ECS-3 公网 IP](img/dns-add-a-record.png)
+   > △ 云解析 DNS（[dns.console.aliyun.com](https://dns.console.aliyun.com)）→ 域名"解析设置"→ **添加记录**：**记录类型** 选 `A`、**主机记录** 填 `coffee`（域名后缀自动带上）、**记录值** 填 ECS-3 的公网 IP，点 **确定** 即生效。
+   > 🔗 官方文档：[添加 A 记录](https://help.aliyun.com/zh/dns/add-an-a-record)
 
    > 前端在三条路径里都托管于 ECS-3 Nginx，所以这一步对路径 A / B / C 完全一致。
 
@@ -286,6 +294,9 @@
    > △ 阿里云官方文档"什么是 IPsec-VPN"页：IPsec-VPN 在本地网络与阿里云 VPC 之间建立加密隧道，提供"绑定 VPN 网关（连单 VPC）"和"绑定转发路由器（连多 VPC）"两种模式。
    > 🔗 官方文档：[什么是 IPsec-VPN](https://help.aliyun.com/zh/vpn/sub-product-ipsec-vpn/product-overview/what-is-ipsec-vpn)
 
+   ![阿里云 VPN 网关控制台：VPN 网关 / 用户网关 / IPsec 连接 / SSL 服务端菜单](img/vpn-console-home.png)
+   > △ VPN 网关控制台（专有网络 → VPN 网关）：左侧 **VPN 网关 / 用户网关 / IPsec 连接 / SSL 服务端 / SSL 客户端**，右上角 **创建 VPN 网关**。教学项目不动手建，认得这个界面即可。
+
 > **不建议用 VPN 网关做"VPC 间互连"**——VPC 间互连有 **更好的方案**（Part 6 的云企业网 CEN），便宜、快、运维简单。VPN 留给"本地 IDC ↔ 云"或"个人电脑 ↔ 云"这两个场景。
 
 ---
@@ -339,6 +350,9 @@ SAG 是阿里云的 **云原生 SD-WAN 方案**。所谓 SD-WAN 就是"用软件
    ![阿里云智能接入网关官方文档：三种产品形态（硬件 CPE / vCPE / App）](img/sag-overview.png)
    > △ 阿里云官方文档"什么是智能接入网关"页：SAG 是软件定义广域网 SD-WAN 方案，提供硬件 CPE（SAG-100WM/SAG-1000）、镜像 vCPE、移动 App 三种接入形态。
    > 🔗 官方文档：[什么是智能接入网关](https://help.aliyun.com/zh/sag/product-overview/what-is-sag)
+
+   ![阿里云智能接入网关控制台：实例管理 / 云连接网 / 访问控制菜单](img/sag-console-home.png)
+   > △ 智能接入网关 SAG 控制台：左侧 **实例管理 / 云连接网 / 访问控制 / QoS 策略**，右上角 **购买智能接入网关**——对应"硬件盒子 / vCPE / App"三种接入形态在此统一管理。
 
 ---
 
@@ -407,6 +421,9 @@ SAG 是阿里云的 **云原生 SD-WAN 方案**。所谓 SD-WAN 就是"用软件
    ![阿里云高速通道官方文档：物理专线 + VBR + 转发路由器 TR 网络拓扑](img/express-connect-vbr.png)
    > △ 阿里云官方文档"什么是高速通道"页的网络拓扑：本地数据中心 → 物理专线 → 边界路由器 VBR → 专线网关 ECR → 转发路由器 TR → 专有网络 VPC，全程不经公网。
    > 🔗 官方文档：[什么是高速通道](https://help.aliyun.com/zh/express-connect/product-overview/what-is-express-connect)
+
+   ![阿里云高速通道控制台：物理端口 / 边界路由器 VBR / 专线网关菜单](img/express-connect-console.png)
+   > △ 高速通道控制台：左侧 **物理端口 / 边界路由器（VBR）/ 专线网关 / QOS 策略**，右上角 **申请物理端口**——5.1 节说的"物理专线接入"和"边界路由器 VBR"就在这里建。
 
 ### 5.4 适合谁、不适合谁
 
@@ -528,6 +545,9 @@ CEN 的计费有两块：
    ![阿里云云企业网官方文档：多地域转发路由器 TR 互联多 VPC 拓扑](img/cen-topology.png)
    > △ 阿里云官方文档"什么是云企业网"页的组成部分拓扑：多个 VPC 通过各地域的转发路由器 TR（华南/华东/新加坡）经云企业网骨干跨地域互通。
    > 🔗 官方文档：[什么是云企业网](https://help.aliyun.com/zh/cen/product-overview/what-is-cen) ｜ [管理转发路由器实例](https://help.aliyun.com/zh/cen/user-guide/transit-routers)
+
+   ![阿里云云企业网 CEN 控制台：云企业网实例 / 带宽包 / VBR 健康检查菜单](img/cen-console-home.png)
+   > △ 云企业网 CEN 控制台：左侧 **云企业网实例 / 带宽包 / 节省计划 / VBR 健康检查**，列表里每个实例有 **转发路由器 / 连接数 / 带宽包**，右上角 **创建云企业网实例**——VPC、VBR、CCN、IPsec 连接都加进这里互通。
 
 ### 6.7 一个典型企业网最终长什么样
 
